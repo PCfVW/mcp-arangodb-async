@@ -1,0 +1,4 @@
+# Development-only dependencies
+pytest>=8,<9
+black>=23.0.0
+ruff>=0.1.0

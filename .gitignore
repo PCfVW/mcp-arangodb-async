@@ -1,0 +1,59 @@
+# --- Python bytecode / caches ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+
+# --- Virtual environments ---
+.venv/
+venv/
+.env/
+
+# --- Build / packaging ---
+build/
+dist/
+*.egg-info/
+.eggs/
+wheelhouse/
+
+# --- Test / coverage / tooling caches ---
+.pytest_cache/
+.coverage*
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# --- Logs and local outputs ---
+*.log
+pytest_output.txt
+
+# --- IDE / Editor metadata ---
+.idea/
+.vscode/
+.history/
+.vscode/**
+*.code-workspace
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# --- Environment & secrets (do not commit) ---
+*.env
+.env.*
+*.key
+*.pem
+
+# --- Temporary / backup files ---
+*.tmp
+*.bak
+*.swp
+*.swo
+~$*
+
+# --- Project-specific ---
+# Exclude all PDFs from the repository
+**/*.pdf
+gitignore/

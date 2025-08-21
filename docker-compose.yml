@@ -1,0 +1,14 @@
+services:
+  arangodb:
+    image: arangodb:3.11
+    container_name: mcp_arangodb_test
+    environment:
+      ARANGO_ROOT_PASSWORD: ${ARANGO_ROOT_PASSWORD:-changeme}
+    ports:
+      - "8529:8529"
+    healthcheck:
+      test: arangosh --server.username root --server.password "$ARANGO_ROOT_PASSWORD" --javascript.execute-string "require('@arangodb').db._version()" > /dev/null 2>&1 || exit 1
+      interval: 5s
+      timeout: 2s
+      retries: 30
+    restart: unless-stopped
