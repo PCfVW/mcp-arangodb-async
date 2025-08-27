@@ -1,4 +1,4 @@
-# ArangoDB MCP Server for Python - Enhanced Edition
+# ArangoDB MCP Server for Python - Initial Public Release 
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
