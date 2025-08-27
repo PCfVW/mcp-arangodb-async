@@ -5,7 +5,10 @@
 [![MCP](https://img.shields.io/badge/Protocol-MCP-%23555555)](https://modelcontextprotocol.io/)
 [![Graph Tools](https://img.shields.io/badge/Graph_Tools-Enhanced-orange)](https://docs.arangodb.com/stable/graphs/)
 
+
 A comprehensive, production-ready MCP stdio server exposing advanced ArangoDB operations to MCP clients (Claude Desktop, Augment Code). Features async-first Python architecture, wrapping the official `python-arango` driver with graph management capabilities, flexiblecontent conversion utilities (JSON, Markdown, YAML and Table), comprehensive backup/restore functionality, and analytics capabilities.
+
+
 ---
 
 ## Architecture at a Glance
@@ -14,11 +17,12 @@ Your AI Assistant interacts with this enhanced server, which provides both basic
 
 ```
 +------------------------+      +-------------------------+      +----------------------+
-|   MCP Client           |      |   ArangoDB MCP Server   |      |   ArangoDB           |
+|       MCP Client       |      |   ArangoDB MCP Server   |      |       ArangoDB       |
 | (Claude, Augment, etc.)|----->|   (Enhanced Python)     |----->|   (Docker Container) |
 |                        |      |   • Core Tools          |      |   • Multi-Model DB   |
 |                        |      |   • Graph Management    |      |   • Graph Engine     |
 |                        |      |   • Content Conversion  |      |   • AQL Engine       |
+|                        |      |   • Analytics           |      |                      |
 +------------------------+      +-------------------------+      +----------------------+
 ```
 
