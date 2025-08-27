@@ -6,11 +6,27 @@ Purpose:
     arguments and perform operations via the python-arango driver, returning
     simple JSON-serializable results.
 
+Handler Signature Patterns:
+    Most handlers follow the standard pattern documented in the README:
+        (db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]
+
+    Exception for parameter-less operations:
+        handle_list_collections(db: StandardDatabase, args: Optional[Dict[str, Any]] = None)
+
+    This dual signature approach serves several purposes:
+    1. Semantic correctness - operations that don't need parameters shouldn't require them
+    2. Backward compatibility - direct Python usage can call list_collections(db) without args
+    3. MCP integration - the _invoke_handler pattern in entry.py handles both signatures seamlessly
+
+    The @handle_errors decorator accommodates both patterns by checking if args is None.
+    This allows the same handler to work in both MCP context (with validated args dict) and
+    direct Python usage (with optional args for parameter-less operations).
+
 Functions by category:
 
 Core Data:
     - handle_arango_query
-    - handle_list_collections
+    - handle_list_collections (uses Optional[Dict[str, Any]] = None signature)
     - handle_insert
     - handle_update
     - handle_remove
@@ -37,7 +53,7 @@ Enhanced Query:
     - handle_query_builder
     - handle_query_profile
 
-Graph:
+Graph Operations:
     - handle_create_graph
     - handle_add_edge
     - handle_traverse
@@ -45,6 +61,17 @@ Graph:
     - handle_list_graphs
     - handle_add_vertex_collection
     - handle_add_edge_definition
+
+Graph Management:
+    - handle_backup_graph
+    - handle_restore_graph
+    - handle_backup_named_graphs
+    - handle_validate_graph_integrity
+    - handle_graph_statistics
+
+All handlers are decorated with @handle_errors for consistent error handling.
+The MCP integration layer in entry.py uses _invoke_handler to accommodate both
+signature patterns seamlessly, enabling comprehensive testing and direct usage.
 """
 
 from __future__ import annotations
@@ -59,19 +86,52 @@ from arango.exceptions import ArangoError
 
 # Type imports removed - using Dict[str, Any] for validated args from Pydantic models
 from .backup import backup_collections_to_dir
+from .graph_backup import (
+    backup_graph_to_dir,
+    restore_graph_from_dir,
+    backup_named_graphs,
+    validate_graph_integrity,
+    calculate_graph_statistics,
+)
 
 # Configure logger for handlers
 logger = logging.getLogger(__name__)
 
 
 def handle_errors(func):
-    """Decorator to standardize error handling across all handlers."""
+    """Decorator to standardize error handling across all handlers.
+
+    This decorator accommodates the dual signature pattern used in the codebase:
+
+    1. Standard handlers: func(db: StandardDatabase, args: Dict[str, Any])
+       - Most handlers expect args to be provided
+       - Used for operations that require parameters
+
+    2. Parameter-less handlers: func(db: StandardDatabase, args: Optional[Dict[str, Any]] = None)
+       - Currently only handle_list_collections uses this pattern
+       - Used for operations that don't require parameters (semantic correctness)
+       - Supports direct Python usage: handle_list_collections(db) without args
+
+    The decorator checks if args is None and calls the appropriate signature:
+    - If args is None: calls func(db) for parameter-less operations
+    - If args is provided: calls func(db, args) for standard operations
+
+    This enables the same handler to work in both:
+    - MCP context: where args is always a validated dictionary from Pydantic models
+    - Direct Python usage: where args might be None for parameter-less operations
+
+    The _invoke_handler function in entry.py provides additional signature detection
+    for test compatibility, but this decorator handles the core dual signature support.
+    """
     def wrapper(db: StandardDatabase, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         try:
-            # Handle functions that accept optional args parameter
+            # Handle parameter-less operations (e.g., list_collections)
+            # These handlers accept Optional[Dict[str, Any]] = None in their signature
             if args is None:
                 return func(db)
             else:
+                # Handle standard operations that require args parameter
+                # These handlers expect Dict[str, Any] (non-optional)
                 return func(db, args)
         except KeyError as e:
             logger.error(f"Missing required parameter in {func.__name__}: {e}")
@@ -135,9 +195,17 @@ def handle_arango_query(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict
 def handle_list_collections(db: StandardDatabase, args: Optional[Dict[str, Any]] = None) -> List[str]:
     """Return non-system collection names (document + edge).
 
+    Note: This handler uses Optional[Dict[str, Any]] = None signature pattern because:
+    1. Semantic correctness - listing collections doesn't require any parameters
+    2. Direct Python usage - allows calling handle_list_collections(db) without args
+    3. Backward compatibility - maintains the documented direct usage pattern
+    4. The @handle_errors decorator handles both this signature and the standard pattern
+
+    This is the only handler that uses this pattern; all others use Dict[str, Any].
+
     Args:
         db: ArangoDB database instance
-        args: Optional arguments (unused for this operation)
+        args: Optional arguments (unused for this operation, maintained for MCP compatibility)
 
     Returns:
         List of non-system collection names
@@ -356,10 +424,9 @@ def handle_list_indexes(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict
 
 @handle_errors
 def handle_create_index(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
-    """Create an index for a collection, supporting common index types.
+    """Create an index for a collection, supporting all common index types.
 
-    Supported types: persistent, hash, skiplist
-    Other types (ttl, fulltext, geo) are not yet implemented here.
+    Supported types: persistent, hash, skiplist, ttl, fulltext, geo
 
     Operator model:
       Preconditions:
@@ -503,7 +570,6 @@ def _analyze_query_for_indexes(query: str, plans: List[Dict[str, Any]]) -> List[
             node_type = node.get("type")
             # Suggest on Filter / IndexNode absence
             if node_type == "Filter" or node_type == "EnumerateCollection":
-                deps = node.get("dependencies")
                 # Basic hint without deep AQL parsing
                 suggestions.append({
                     "hint": "Consider adding a persistent/hash index for filtered fields",
@@ -757,7 +823,7 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
         - Optional 'filters' with supported ops: ==, !=, <, <=, >, >=, IN, LIKE; values JSON-serializable.
         - Optional 'sort' [{field, direction}], 'limit' (int), 'return_fields' (projection fields).
       Effects:
-        - Constructs AQL using provided filters/sort/limit and executes via AQL API.
+        - Constructs AQL using bind variables for security and executes via AQL API.
         - Returns a list of documents or projected fields.
         - No mutations; performance depends on available indexes (may scan without indexes).
     """
@@ -767,22 +833,54 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
     limit = args.get("limit")
     return_fields = args.get("return_fields")
 
-    def _quote(v: Any) -> str:
-        if isinstance(v, str):
-            return json.dumps(v)
-        return json.dumps(v)
+    # Validate collection name to prevent injection
+    if not collection or not isinstance(collection, str) or not collection.replace('_', '').replace('-', '').isalnum():
+        raise ValueError("Invalid collection name")
+
+    # Supported operators whitelist
+    SUPPORTED_OPERATORS = {"==", "!=", "<", "<=", ">", ">=", "IN", "LIKE"}
+
+    # Validate field names to prevent injection
+    def _validate_field_name(field: str) -> str:
+        if not field or not isinstance(field, str):
+            raise ValueError("Invalid field name")
+        # Allow alphanumeric, underscore, dot (for nested fields)
+        if not all(c.isalnum() or c in '._' for c in field):
+            raise ValueError(f"Invalid field name: {field}")
+        return field
 
     filter_clauses: List[str] = []
+    bind_vars: Dict[str, Any] = {}
+    bind_counter = 0
+
     for f in filters:
         field = f.get("field")
         op = f.get("op")
         value = f.get("value")
+
+        if not field or not op:
+            continue
+
+        # Validate operator
+        if op not in SUPPORTED_OPERATORS:
+            raise ValueError(f"Unsupported operator: {op}")
+
+        # Validate and sanitize field name
+        field = _validate_field_name(field)
+
+        # Create bind variable
+        bind_var = f"v{bind_counter}"
+        bind_vars[bind_var] = value
+        bind_counter += 1
+
+        # Build clause with proper AQL syntax
         if op == "LIKE":
-            clause = f"LIKE doc.{field}, {_quote(value)}"
+            # ArangoDB LIKE function: LIKE(doc.field, @value, case_insensitive)
+            clause = f"LIKE(doc.{field}, @{bind_var}, true)"
         elif op == "IN":
-            clause = f"doc.{field} IN {_quote(value)}"
+            clause = f"doc.{field} IN @{bind_var}"
         else:
-            clause = f"doc.{field} {op} {_quote(value)}"
+            clause = f"doc.{field} {op} @{bind_var}"
         filter_clauses.append(clause)
 
     filter_section = ""
@@ -791,13 +889,44 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
 
     sort_section = ""
     if sorts:
-        sort_exprs = [f"doc.{s.get('field')} {s.get('direction', 'ASC')}" for s in sorts]
-        sort_section = "\n  SORT " + ", ".join(sort_exprs)
+        sort_exprs = []
+        for s in sorts:
+            sort_field = s.get('field')
+            direction = s.get('direction', 'ASC')
+            if sort_field:
+                # Validate field name and direction
+                sort_field = _validate_field_name(sort_field)
+                if direction.upper() not in ('ASC', 'DESC'):
+                    direction = 'ASC'
+                sort_exprs.append(f"doc.{sort_field} {direction.upper()}")
+        if sort_exprs:
+            sort_section = "\n  SORT " + ", ".join(sort_exprs)
 
-    limit_section = f"\n  LIMIT {int(limit)}" if limit else ""
+    limit_section = ""
+    if limit:
+        try:
+            limit_val = int(limit)
+            if limit_val > 0:
+                bind_vars["limit_val"] = limit_val
+                limit_section = "\n  LIMIT @limit_val"
+        except (ValueError, TypeError):
+            pass  # Ignore invalid limit
 
+    # Build return clause
     if return_fields:
-        ret = "{" + ", ".join([f"{f}: doc.{f}" for f in return_fields]) + "}"
+        # Validate return field names
+        validated_fields = []
+        for field in return_fields:
+            if isinstance(field, str):
+                try:
+                    validated_field = _validate_field_name(field)
+                    validated_fields.append(validated_field)
+                except ValueError:
+                    continue  # Skip invalid field names
+        if validated_fields:
+            ret = "{" + ", ".join([f"{f}: doc.{f}" for f in validated_fields]) + "}"
+        else:
+            ret = "doc"
     else:
         ret = "doc"
 
@@ -805,7 +934,8 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
     FOR doc IN {collection}{filter_section}{sort_section}{limit_section}
       RETURN {ret}
     """
-    cursor = db.aql.execute(aql)
+
+    cursor = db.aql.execute(aql, bind_vars=bind_vars)
     with safe_cursor(cursor):
         return list(cursor)
 
@@ -1117,3 +1247,146 @@ def handle_bulk_update(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
             else:
                 continue
     return results
+
+
+# Graph Management Handlers (Phase 3 - New Graph Tools)
+@handle_errors
+def handle_backup_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Export complete graph structure including vertices, edges, and metadata.
+
+    Args:
+        db: ArangoDB database instance
+        args: Dictionary with 'graph_name', optional 'output_dir', 'include_metadata', 'doc_limit'
+
+    Returns:
+        Dictionary with backup report (output_dir, written files, counts)
+
+    Operator model:
+      Preconditions:
+        - Database connection available; graph exists.
+        - Output directory writable (if provided).
+      Effects:
+        - Reads graph structure and writes JSON files to output directory.
+        - No database mutations; side-effect is file system writes.
+    """
+    graph_name = args["graph_name"]
+    output_dir = args.get("output_dir")
+    include_metadata = args.get("include_metadata", True)
+    doc_limit = args.get("doc_limit")
+
+    return backup_graph_to_dir(db, graph_name, output_dir, include_metadata, doc_limit)
+
+
+@handle_errors
+def handle_restore_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Import graph data with referential integrity validation and conflict resolution.
+
+    Args:
+        db: ArangoDB database instance
+        args: Dictionary with 'input_dir', optional 'graph_name', 'conflict_resolution', 'validate_integrity'
+
+    Returns:
+        Dictionary with restore report (restored collections, conflicts, errors)
+
+    Operator model:
+      Preconditions:
+        - Database connection available; input directory contains valid graph backup.
+        - Sufficient permissions for collection creation/modification.
+      Effects:
+        - Creates/updates vertex and edge collections.
+        - Validates referential integrity during import.
+        - Handles conflicts according to resolution strategy.
+    """
+    input_dir = args["input_dir"]
+    graph_name = args.get("graph_name")
+    conflict_resolution = args.get("conflict_resolution", "error")
+    validate_integrity = args.get("validate_integrity", True)
+
+    return restore_graph_from_dir(db, input_dir, graph_name, conflict_resolution, validate_integrity)
+
+
+@handle_errors
+def handle_backup_named_graphs(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Backup graph definitions from _graphs system collection.
+
+    Args:
+        db: ArangoDB database instance
+        args: Dictionary with optional 'output_file', 'graph_names'
+
+    Returns:
+        Dictionary with backup report (output_file, graphs_backed_up, missing_graphs)
+
+    Operator model:
+      Preconditions:
+        - Database connection available.
+        - Output file location writable (if provided).
+      Effects:
+        - Reads graph definitions and writes JSON file.
+        - No database mutations; side-effect is file system writes.
+    """
+    output_file = args.get("output_file")
+    graph_names = args.get("graph_names")
+
+    return backup_named_graphs(db, output_file, graph_names)
+
+
+@handle_errors
+def handle_validate_graph_integrity(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Verify graph consistency, orphaned edges, and constraint violations.
+
+    Args:
+        db: ArangoDB database instance
+        args: Dictionary with optional 'graph_name', 'check_orphaned_edges', 'check_constraints', 'return_details'
+
+    Returns:
+        Dictionary with validation results (valid, orphaned_edges, constraint_violations, details)
+
+    Operator model:
+      Preconditions:
+        - Database connection available; graphs exist (if specified).
+      Effects:
+        - Reads graph data and validates consistency.
+        - No database mutations; read-only analysis.
+    """
+    graph_name = args.get("graph_name")
+    check_orphaned_edges = args.get("check_orphaned_edges", True)
+    check_constraints = args.get("check_constraints", True)
+    return_details = args.get("return_details", False)
+
+    return validate_graph_integrity(db, graph_name, check_orphaned_edges, check_constraints, return_details)
+
+
+@handle_errors
+def handle_graph_statistics(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Generate comprehensive graph analytics with improved representativeness.
+
+    Args:
+        db: ArangoDB database instance
+        args: Dictionary with optional parameters for graph analysis
+
+    Returns:
+        Dictionary with graph statistics (graphs_analyzed, statistics, analysis_timestamp)
+
+    Operator model:
+      Preconditions:
+        - Database connection available; graphs exist (if specified).
+      Effects:
+        - Reads graph data and calculates analytics.
+        - No database mutations; read-only analysis.
+    """
+    graph_name = args.get("graph_name")
+    include_degree_distribution = args.get("include_degree_distribution", True)
+    include_connectivity = args.get("include_connectivity", True)
+    sample_size = args.get("sample_size")
+    aggregate_collections = args.get("aggregate_collections", False)
+    per_collection_stats = args.get("per_collection_stats", False)
+
+    return calculate_graph_statistics(
+        db,
+        graph_name,
+        include_degree_distribution,
+        include_connectivity,
+        sample_size,
+        aggregate_collections,
+        per_collection_stats
+    )

@@ -3,15 +3,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "arango-mcp-server"
-version = "0.1.0"
+name = "mcp-arangodb-async"
+version = "0.2.0"
 description = "A Model Context Protocol server for ArangoDB"
 readme = "README.md"
 license = "Apache-2.0"
 authors = [
     { name = "Eric Jacopin, eric.jacopin@protonmail.com" },
 ]
-keywords = ["mcp", "arangodb", "database", "model-context-protocol"]
+keywords = ["mcp", "mcp-server", "model-context-protocol", "async", "arangodb", "database", "aql", "graph"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -39,15 +39,15 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ravenwits/mcp-server-arangodb-python"
-Repository = "https://github.com/ravenwits/mcp-server-arangodb-python"
-Issues = "https://github.com/ravenwits/mcp-server-arangodb-python/issues"
+Homepage = "https://github.com/PCfVW/mcp-arango-async"
+Repository = "https://github.com/PCfVW/mcp-arango-async"
+Issues = "https://github.com/PCfVW/mcp-arango-async/issues"
 
 [project.scripts]
-arango-server = "mcp_arangodb.entry:main"
+mcp-arangodb-async = "mcp_arangodb_async.entry:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["mcp_arangodb"]
+packages = ["mcp_arangodb_async"]
 
 [tool.black]
 line-length = 88

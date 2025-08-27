@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, MagicMock
-from mcp_arangodb.handlers import (
+from mcp_arangodb_async.handlers import (
     handle_arango_query,
     handle_list_collections,
     handle_insert,
@@ -13,6 +13,12 @@ from mcp_arangodb.handlers import (
     handle_explain_query,
     handle_validate_references,
     handle_insert_with_validation,
+    # New graph management handlers
+    handle_backup_graph,
+    handle_restore_graph,
+    handle_backup_named_graphs,
+    handle_validate_graph_integrity,
+    handle_graph_statistics,
     handle_bulk_insert,
     handle_bulk_update,
 )
@@ -279,7 +285,7 @@ class TestHandlers:
             "total_collections": 1,
             "total_documents": 10
         }
-        monkeypatch.setattr("mcp_arangodb.handlers.backup_collections_to_dir", mock_backup)
+        monkeypatch.setattr("mcp_arangodb_async.handlers.backup_collections_to_dir", mock_backup)
         return mock_backup
 
     def test_handle_backup_single_collection(self, mock_backup_function):
@@ -316,4 +322,286 @@ class TestHandlers:
             output_dir="/tmp/backup",
             collections=["users", "products"],
             doc_limit=100
+        )
+
+
+class TestGraphManagementHandlers:
+    """Test cases for new graph management handler functions."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.mock_db = Mock()
+
+    @pytest.fixture
+    def mock_backup_graph_function(self, monkeypatch):
+        """Mock the backup_graph_to_dir function."""
+        mock_backup = Mock()
+        mock_backup.return_value = {
+            "graph_name": "test_graph",
+            "output_dir": "/tmp/graph_backup",
+            "vertex_files": [{"collection": "users", "count": 10}],
+            "edge_files": [{"collection": "follows", "count": 5}],
+            "total_vertex_collections": 1,
+            "total_edge_collections": 1,
+            "total_documents": 15,
+            "metadata_included": True
+        }
+        monkeypatch.setattr("mcp_arangodb_async.handlers.backup_graph_to_dir", mock_backup)
+        return mock_backup
+
+    def test_handle_backup_graph_success(self, mock_backup_graph_function):
+        """Test successful graph backup."""
+        args = {
+            "graph_name": "test_graph",
+            "output_dir": "/tmp/graph_backup",
+            "include_metadata": True,
+            "doc_limit": 1000
+        }
+
+        result = handle_backup_graph(self.mock_db, args)
+
+        assert result["graph_name"] == "test_graph"
+        assert result["total_documents"] == 15
+        mock_backup_graph_function.assert_called_once_with(
+            self.mock_db,
+            "test_graph",
+            "/tmp/graph_backup",
+            True,
+            1000
+        )
+
+    def test_handle_backup_graph_minimal_args(self, mock_backup_graph_function):
+        """Test graph backup with minimal arguments."""
+        args = {"graph_name": "minimal_graph"}
+
+        result = handle_backup_graph(self.mock_db, args)
+
+        assert result["graph_name"] == "test_graph"
+        mock_backup_graph_function.assert_called_once_with(
+            self.mock_db,
+            "minimal_graph",
+            None,  # output_dir default
+            True,  # include_metadata default
+            None   # doc_limit default
+        )
+
+    @pytest.fixture
+    def mock_restore_graph_function(self, monkeypatch):
+        """Mock the restore_graph_from_dir function."""
+        mock_restore = Mock()
+        mock_restore.return_value = {
+            "graph_name": "restored_graph",
+            "original_graph_name": "test_graph",
+            "input_dir": "/tmp/backup",
+            "restored_vertices": [{"collection": "users", "inserted": 10}],
+            "restored_edges": [{"collection": "follows", "inserted": 5}],
+            "graph_created": True,
+            "conflicts": [],
+            "errors": [],
+            "integrity_report": {"valid": True},
+            "total_documents_restored": 15
+        }
+        monkeypatch.setattr("mcp_arangodb_async.handlers.restore_graph_from_dir", mock_restore)
+        return mock_restore
+
+    def test_handle_restore_graph_success(self, mock_restore_graph_function):
+        """Test successful graph restore."""
+        args = {
+            "input_dir": "/tmp/backup",
+            "graph_name": "restored_graph",
+            "conflict_resolution": "overwrite",
+            "validate_integrity": True
+        }
+
+        result = handle_restore_graph(self.mock_db, args)
+
+        assert result["graph_name"] == "restored_graph"
+        assert result["graph_created"] is True
+        assert result["total_documents_restored"] == 15
+        mock_restore_graph_function.assert_called_once_with(
+            self.mock_db,
+            "/tmp/backup",
+            "restored_graph",
+            "overwrite",
+            True
+        )
+
+    def test_handle_restore_graph_minimal_args(self, mock_restore_graph_function):
+        """Test graph restore with minimal arguments."""
+        args = {"input_dir": "/tmp/backup"}
+
+        result = handle_restore_graph(self.mock_db, args)
+
+        assert result["graph_name"] == "restored_graph"
+        mock_restore_graph_function.assert_called_once_with(
+            self.mock_db,
+            "/tmp/backup",
+            None,    # graph_name default
+            "error", # conflict_resolution default
+            True     # validate_integrity default
+        )
+
+    @pytest.fixture
+    def mock_backup_named_graphs_function(self, monkeypatch):
+        """Mock the backup_named_graphs function."""
+        mock_backup = Mock()
+        mock_backup.return_value = {
+            "output_file": "/tmp/graphs.json",
+            "graphs_backed_up": 2,
+            "missing_graphs": [],
+            "backup_size_bytes": 1024
+        }
+        monkeypatch.setattr("mcp_arangodb_async.handlers.backup_named_graphs", mock_backup)
+        return mock_backup
+
+    def test_handle_backup_named_graphs_success(self, mock_backup_named_graphs_function):
+        """Test successful named graphs backup."""
+        args = {
+            "output_file": "/tmp/graphs.json",
+            "graph_names": ["graph1", "graph2"]
+        }
+
+        result = handle_backup_named_graphs(self.mock_db, args)
+
+        assert result["graphs_backed_up"] == 2
+        assert result["missing_graphs"] == []
+        mock_backup_named_graphs_function.assert_called_once_with(
+            self.mock_db,
+            "/tmp/graphs.json",
+            ["graph1", "graph2"]
+        )
+
+    def test_handle_backup_named_graphs_minimal_args(self, mock_backup_named_graphs_function):
+        """Test named graphs backup with minimal arguments."""
+        args = {}
+
+        result = handle_backup_named_graphs(self.mock_db, args)
+
+        assert result["graphs_backed_up"] == 2
+        mock_backup_named_graphs_function.assert_called_once_with(
+            self.mock_db,
+            None,  # output_file default
+            None   # graph_names default
+        )
+
+    @pytest.fixture
+    def mock_validate_graph_integrity_function(self, monkeypatch):
+        """Mock the validate_graph_integrity function."""
+        mock_validate = Mock()
+        mock_validate.return_value = {
+            "valid": True,
+            "graphs_checked": 1,
+            "total_orphaned_edges": 0,
+            "total_constraint_violations": 0,
+            "results": [{
+                "graph_name": "test_graph",
+                "valid": True,
+                "orphaned_edges_count": 0,
+                "constraint_violations_count": 0,
+                "orphaned_edges": [],
+                "constraint_violations": []
+            }],
+            "summary": "Checked 1 graphs: 0 orphaned edges, 0 violations"
+        }
+        monkeypatch.setattr("mcp_arangodb_async.handlers.validate_graph_integrity", mock_validate)
+        return mock_validate
+
+    def test_handle_validate_graph_integrity_success(self, mock_validate_graph_integrity_function):
+        """Test successful graph integrity validation."""
+        args = {
+            "graph_name": "test_graph",
+            "check_orphaned_edges": True,
+            "check_constraints": True,
+            "return_details": False
+        }
+
+        result = handle_validate_graph_integrity(self.mock_db, args)
+
+        assert result["valid"] is True
+        assert result["graphs_checked"] == 1
+        assert result["total_orphaned_edges"] == 0
+        mock_validate_graph_integrity_function.assert_called_once_with(
+            self.mock_db,
+            "test_graph",
+            True,
+            True,
+            False
+        )
+
+    def test_handle_validate_graph_integrity_minimal_args(self, mock_validate_graph_integrity_function):
+        """Test graph integrity validation with minimal arguments."""
+        args = {}
+
+        result = handle_validate_graph_integrity(self.mock_db, args)
+
+        assert result["valid"] is True
+        mock_validate_graph_integrity_function.assert_called_once_with(
+            self.mock_db,
+            None,  # graph_name default
+            True,  # check_orphaned_edges default
+            True,  # check_constraints default
+            False  # return_details default
+        )
+
+    @pytest.fixture
+    def mock_calculate_graph_statistics_function(self, monkeypatch):
+        """Mock the calculate_graph_statistics function."""
+        mock_stats = Mock()
+        mock_stats.return_value = {
+            "graphs_analyzed": 1,
+            "statistics": [{
+                "graph_name": "test_graph",
+                "vertex_collections": ["users"],
+                "edge_collections": ["follows"],
+                "total_vertices": 100,
+                "total_edges": 50,
+                "density": 0.01,
+                "out_degree_distribution": [{"degree": 1, "frequency": 80}],
+                "max_out_degree": 5,
+                "avg_out_degree": 0.5,
+                "connectivity_sample_size": 10,
+                "avg_reachable_vertices": 25.5,
+                "max_reachable_vertices": 50
+            }],
+            "analysis_timestamp": "2024-01-01T12:00:00"
+        }
+        monkeypatch.setattr("mcp_arangodb_async.handlers.calculate_graph_statistics", mock_stats)
+        return mock_stats
+
+    def test_handle_graph_statistics_success(self, mock_calculate_graph_statistics_function):
+        """Test successful graph statistics calculation."""
+        args = {
+            "graph_name": "test_graph",
+            "include_degree_distribution": True,
+            "include_connectivity": True,
+            "sample_size": 100
+        }
+
+        result = handle_graph_statistics(self.mock_db, args)
+
+        assert result["graphs_analyzed"] == 1
+        assert len(result["statistics"]) == 1
+        assert result["statistics"][0]["total_vertices"] == 100
+        assert result["statistics"][0]["total_edges"] == 50
+        mock_calculate_graph_statistics_function.assert_called_once_with(
+            self.mock_db,
+            "test_graph",
+            True,
+            True,
+            100
+        )
+
+    def test_handle_graph_statistics_minimal_args(self, mock_calculate_graph_statistics_function):
+        """Test graph statistics calculation with minimal arguments."""
+        args = {}
+
+        result = handle_graph_statistics(self.mock_db, args)
+
+        assert result["graphs_analyzed"] == 1
+        mock_calculate_graph_statistics_function.assert_called_once_with(
+            self.mock_db,
+            None,  # graph_name default
+            True,  # include_degree_distribution default
+            True,  # include_connectivity default
+            None   # sample_size default
         )

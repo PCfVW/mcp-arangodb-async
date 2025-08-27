@@ -21,7 +21,10 @@ from arango.database import StandardDatabase
 
 
 def validate_output_directory(output_dir: str) -> str:
-    """Validate and sanitize output directory to prevent path traversal attacks.
+    """Validate and sanitize output directory using safe sandboxing approach.
+
+    Uses pathlib.Path.resolve() to normalize paths and prefix checking against
+    allowed root directories to prevent path traversal attacks.
 
     Args:
         output_dir: The requested output directory path
@@ -30,44 +33,57 @@ def validate_output_directory(output_dir: str) -> str:
         Validated and normalized absolute path
 
     Raises:
-        ValueError: If the path is invalid or contains path traversal attempts
+        ValueError: If the path is invalid or outside allowed directories
     """
-    # Convert to absolute path and resolve any .. components
-    abs_path = os.path.abspath(output_dir)
-
-    # Check for obvious path traversal attempts in the original path
-    if '..' in output_dir:
-        raise ValueError("Path traversal detected: '..' not allowed in path")
-
-    # For security, ensure the path doesn't contain suspicious patterns
-    suspicious_patterns = ['../', '..\\', '/../', '\\..\\']
-    for pattern in suspicious_patterns:
-        if pattern in output_dir:
-            raise ValueError(f"Suspicious path pattern detected: {pattern}")
-
-    # Allow temporary directories for testing (they typically start with /tmp or contain 'temp')
     import tempfile
-    temp_dir = tempfile.gettempdir()
-    if abs_path.startswith(temp_dir):
-        return abs_path
 
-    # For production use, ensure path is within current working directory
-    cwd = os.getcwd()
+    # Convert to Path object and resolve to normalize (handles .. components safely)
     try:
-        # This will raise ValueError if abs_path is not relative to cwd
-        rel_path = os.path.relpath(abs_path, cwd)
-        # Ensure the relative path doesn't start with .. (going up from cwd)
-        if rel_path.startswith('..'):
-            raise ValueError("Path outside current working directory")
-    except ValueError as e:
-        # Allow if it's a cross-drive issue on Windows but still within reasonable bounds
-        if os.name == 'nt' and 'different drives' in str(e).lower():
-            # On Windows, allow if it's a temp directory or reasonable absolute path
-            if 'temp' in abs_path.lower() or abs_path.startswith(temp_dir):
-                return abs_path
-        raise ValueError(f"Output directory '{output_dir}' is not allowed. Must be within current working directory or temp directory.")
+        requested_path = Path(output_dir).resolve()
+    except (OSError, ValueError) as e:
+        raise ValueError(f"Invalid path: {e}")
 
-    return abs_path
+    # Define allowed root directories
+    allowed_roots = [
+        Path.cwd().resolve(),  # Current working directory
+        Path(tempfile.gettempdir()).resolve(),  # System temp directory
+    ]
+
+    # Add user-specific temp directories if they exist
+    user_temp_dirs = []
+    if os.name == 'nt':  # Windows
+        if 'LOCALAPPDATA' in os.environ:
+            user_temp_dirs.append(Path(os.environ['LOCALAPPDATA']) / 'Temp')
+        if 'TEMP' in os.environ:
+            user_temp_dirs.append(Path(os.environ['TEMP']))
+    else:  # Unix-like
+        if 'TMPDIR' in os.environ:
+            user_temp_dirs.append(Path(os.environ['TMPDIR']))
+        user_temp_dirs.extend([Path('/tmp'), Path('/var/tmp')])
+
+    # Add existing user temp directories to allowed roots
+    for temp_dir in user_temp_dirs:
+        try:
+            if temp_dir.exists():
+                allowed_roots.append(temp_dir.resolve())
+        except (OSError, ValueError):
+            continue  # Skip invalid temp directories
+
+    # Check if the resolved path is within any allowed root
+    for allowed_root in allowed_roots:
+        try:
+            # This will succeed if requested_path is within allowed_root
+            requested_path.relative_to(allowed_root)
+            return str(requested_path)
+        except ValueError:
+            continue  # Not within this root, try next
+
+    # If we get here, the path is not within any allowed root
+    allowed_paths = [str(root) for root in allowed_roots]
+    raise ValueError(
+        f"Output directory '{output_dir}' is outside allowed directories. "
+        f"Allowed roots: {allowed_paths}"
+    )
 
 
 def backup_collections_to_dir(

@@ -138,8 +138,7 @@ class CreateIndexArgs(BaseModel):
 
 class DeleteIndexArgs(BaseModel):
     collection: str = Field(description="Name of the collection containing the index")
-    id_or_name: str = Field(description="Index ID or name to delete")
-    id_or_name: str = Field(description="Index id (e.g., collection/12345) or name")
+    id_or_name: str = Field(description="Index ID (e.g., collection/12345) or name to delete")
 
 
 class ExplainQueryArgs(BaseModel):
@@ -280,3 +279,133 @@ class QueryProfileArgs(BaseModel):
     query: str
     bind_vars: Optional[Dict[str, Any]] = None
     max_plans: int = 1
+
+
+# Graph Management Models (Phase 1 - New Graph Tools)
+class BackupGraphArgs(BaseModel):
+    """Arguments for backing up a complete graph structure."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    graph_name: str = Field(
+        description="Name of the graph to backup"
+    )
+    output_dir: Optional[str] = Field(
+        default=None,
+        alias="outputDir",
+        description="Output directory for backup files (defaults to timestamped graph_backups/ folder)"
+    )
+    include_metadata: bool = Field(
+        default=True,
+        alias="includeMetadata",
+        description="Include graph metadata and definitions in backup"
+    )
+    doc_limit: Optional[int] = Field(
+        default=None,
+        ge=1,
+        alias="docLimit",
+        description="Maximum number of documents to backup per collection"
+    )
+
+
+class RestoreGraphArgs(BaseModel):
+    """Arguments for restoring a graph from backup."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    input_dir: str = Field(
+        alias="inputDir",
+        description="Directory containing graph backup files"
+    )
+    graph_name: Optional[str] = Field(
+        default=None,
+        alias="graphName",
+        description="Target graph name (defaults to original name from backup)"
+    )
+    conflict_resolution: Literal["skip", "overwrite", "error"] = Field(
+        default="error",
+        alias="conflictResolution",
+        description="How to handle conflicts: skip existing, overwrite, or error"
+    )
+    validate_integrity: bool = Field(
+        default=True,
+        alias="validateIntegrity",
+        description="Validate referential integrity during restore"
+    )
+
+
+class BackupNamedGraphsArgs(BaseModel):
+    """Arguments for backing up graph definitions from _graphs collection."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    output_file: Optional[str] = Field(
+        default=None,
+        alias="outputFile",
+        description="Output file for graph definitions (defaults to timestamped file)"
+    )
+    graph_names: Optional[List[str]] = Field(
+        default=None,
+        alias="graphNames",
+        description="Specific graphs to backup (if not specified, backs up all graphs)"
+    )
+
+
+class ValidateGraphIntegrityArgs(BaseModel):
+    """Arguments for validating graph consistency and integrity."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    graph_name: Optional[str] = Field(
+        default=None,
+        alias="graphName",
+        description="Specific graph to validate (if not specified, validates all graphs)"
+    )
+    check_orphaned_edges: bool = Field(
+        default=True,
+        alias="checkOrphanedEdges",
+        description="Check for edges with missing vertices"
+    )
+    check_constraints: bool = Field(
+        default=True,
+        alias="checkConstraints",
+        description="Validate graph constraints and edge definitions"
+    )
+    return_details: bool = Field(
+        default=False,
+        alias="returnDetails",
+        description="Return detailed violation information"
+    )
+
+
+class GraphStatisticsArgs(BaseModel):
+    """Arguments for generating comprehensive graph analytics."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    graph_name: Optional[str] = Field(
+        default=None,
+        alias="graphName",
+        description="Specific graph to analyze (if not specified, analyzes all graphs)"
+    )
+    include_degree_distribution: bool = Field(
+        default=True,
+        alias="includeDegreeDistribution",
+        description="Calculate degree distribution statistics"
+    )
+    include_connectivity: bool = Field(
+        default=True,
+        alias="includeConnectivity",
+        description="Calculate connectivity metrics"
+    )
+    sample_size: Optional[int] = Field(
+        default=None,
+        ge=100,
+        alias="sampleSize",
+        description="Sample size for large graphs (defaults to automatic sizing)"
+    )
+    aggregate_collections: bool = Field(
+        default=False,
+        alias="aggregateCollections",
+        description="Aggregate statistics across all collections for more representative results"
+    )
+    per_collection_stats: bool = Field(
+        default=False,
+        alias="perCollectionStats",
+        description="Provide detailed per-collection statistics breakdown"
+    )

@@ -1,5 +1,5 @@
 import types
-from mcp_arangodb.handlers import (
+from mcp_arangodb_async.handlers import (
     handle_create_graph,
     handle_add_edge,
     handle_traverse,

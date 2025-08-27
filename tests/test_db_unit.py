@@ -3,8 +3,8 @@
 import pytest
 import asyncio
 from unittest.mock import Mock, patch, AsyncMock
-from mcp_arangodb.db import get_client_and_db, health_check, connect_with_retry
-from mcp_arangodb.config import Config
+from mcp_arangodb_async.db import get_client_and_db, health_check, connect_with_retry
+from mcp_arangodb_async.config import Config
 
 
 class TestDatabaseUtils:
@@ -13,7 +13,7 @@ class TestDatabaseUtils:
     def setup_method(self):
         """Set up test fixtures."""
         # Reset connection manager to ensure clean state for each test
-        from mcp_arangodb.db import _connection_manager
+        from mcp_arangodb_async.db import _connection_manager
         _connection_manager.close()
 
         self.config = Config(
@@ -24,7 +24,7 @@ class TestDatabaseUtils:
             request_timeout=30.0
         )
 
-    @patch('mcp_arangodb.db.ArangoClient')
+    @patch('mcp_arangodb_async.db.ArangoClient')
     def test_get_client_and_db_success(self, mock_arango_client):
         """Test successful client and database connection."""
         # Setup mocks
@@ -51,7 +51,7 @@ class TestDatabaseUtils:
         )
         mock_db.version.assert_called_once()
 
-    @patch('mcp_arangodb.db.ArangoClient')
+    @patch('mcp_arangodb_async.db.ArangoClient')
     def test_get_client_and_db_connection_error(self, mock_arango_client):
         """Test connection error handling."""
         # Setup mock to raise exception
@@ -84,7 +84,7 @@ class TestDatabaseUtils:
             health_check(mock_db)
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb.db.get_client_and_db')
+    @patch('mcp_arangodb_async.db.get_client_and_db')
     async def test_connect_with_retry_success_first_attempt(self, mock_get_client):
         """Test successful connection on first attempt."""
         mock_client = Mock()
@@ -105,7 +105,7 @@ class TestDatabaseUtils:
         mock_logger.info.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb.db.get_client_and_db')
+    @patch('mcp_arangodb_async.db.get_client_and_db')
     async def test_connect_with_retry_success_second_attempt(self, mock_get_client):
         """Test successful connection on second attempt."""
         mock_client = Mock()
@@ -130,7 +130,7 @@ class TestDatabaseUtils:
         assert mock_logger.info.call_count == 1
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb.db.get_client_and_db')
+    @patch('mcp_arangodb_async.db.get_client_and_db')
     async def test_connect_with_retry_all_attempts_fail(self, mock_get_client):
         """Test all retry attempts fail."""
         mock_get_client.side_effect = Exception("Connection failed")
@@ -150,7 +150,7 @@ class TestDatabaseUtils:
         assert mock_logger.error.call_count == 1
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb.db.get_client_and_db')
+    @patch('mcp_arangodb_async.db.get_client_and_db')
     async def test_connect_with_retry_no_logger(self, mock_get_client):
         """Test retry without logger (should not crash)."""
         mock_client = Mock()

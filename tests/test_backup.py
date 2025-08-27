@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+import pytest
 from typing import Any, Dict, Iterable, List
 from tempfile import TemporaryDirectory
 
-from mcp_arangodb.backup import backup_collections_to_dir
+from mcp_arangodb_async.backup import backup_collections_to_dir, validate_output_directory
 
 
 class FakeCursor:
@@ -100,3 +101,78 @@ def test_backup_skips_unknown_collection_names():
         written = report["written"]
         assert len(written) == 1
         assert written[0]["collection"] == "alpha"
+
+
+class TestPathValidation:
+    """Test the new secure path validation functionality."""
+
+    def test_validate_output_directory_allows_temp(self):
+        """Test that temp directories are allowed."""
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        test_path = os.path.join(temp_dir, "test_backup")
+
+        result = validate_output_directory(test_path)
+        # Should return the resolved absolute path
+        assert os.path.isabs(result)
+        assert "test_backup" in result
+
+    def test_validate_output_directory_allows_cwd_subdirectory(self):
+        """Test that subdirectories of current working directory are allowed."""
+        test_path = "backups/test"
+        result = validate_output_directory(test_path)
+        assert os.path.isabs(result)
+        assert result.endswith("test")
+
+    def test_validate_output_directory_rejects_traversal(self):
+        """Test that path traversal attempts are rejected."""
+        with pytest.raises(ValueError, match="outside allowed directories"):
+            validate_output_directory("../../../etc/passwd")
+
+        with pytest.raises(ValueError, match="outside allowed directories"):
+            validate_output_directory("backup/../../../etc/passwd")
+
+    def test_validate_output_directory_rejects_absolute_outside_roots(self):
+        """Test that absolute paths outside allowed roots are rejected."""
+        if os.name == 'nt':
+            # Windows - try to access C:\Windows
+            with pytest.raises(ValueError, match="outside allowed directories"):
+                validate_output_directory("C:\\Windows\\System32")
+        else:
+            # Unix - try to access /etc
+            with pytest.raises(ValueError, match="outside allowed directories"):
+                validate_output_directory("/etc/passwd")
+
+    def test_validate_output_directory_handles_complex_traversal(self):
+        """Test that complex path traversal attempts are properly handled."""
+        # These should all be rejected as they resolve outside allowed directories
+        traversal_attempts = [
+            "backup/../../..",
+            "backup/../../../etc",
+            "./../../..",
+            "backup/subdir/../../../etc",
+        ]
+
+        for attempt in traversal_attempts:
+            with pytest.raises(ValueError, match="outside allowed directories"):
+                validate_output_directory(attempt)
+
+    def test_validate_output_directory_normalizes_paths(self):
+        """Test that paths are properly normalized."""
+        test_path = "backup/./subdir/../final"
+        result = validate_output_directory(test_path)
+
+        # Should be normalized (no ./ or ../ components)
+        assert "./" not in result
+        assert "../" not in result
+        assert result.endswith("final")
+
+    def test_validate_output_directory_handles_empty_paths(self):
+        """Test that empty paths are handled appropriately."""
+        # Empty string resolves to current directory, which should be allowed
+        result = validate_output_directory("")
+        assert os.path.isabs(result)
+
+        # Whitespace-only string should also resolve to current directory
+        result = validate_output_directory("   ")
+        assert os.path.isabs(result)

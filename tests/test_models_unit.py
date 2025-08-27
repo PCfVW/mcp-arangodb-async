@@ -2,7 +2,7 @@
 
 import pytest
 from pydantic import ValidationError
-from mcp_arangodb.models import (
+from mcp_arangodb_async.models import (
     QueryArgs,
     ListCollectionsArgs,
     InsertArgs,
@@ -18,6 +18,12 @@ from mcp_arangodb.models import (
     InsertWithValidationArgs,
     BulkInsertArgs,
     BulkUpdateArgs,
+    # New graph management models
+    BackupGraphArgs,
+    RestoreGraphArgs,
+    BackupNamedGraphsArgs,
+    ValidateGraphIntegrityArgs,
+    GraphStatisticsArgs,
 )
 
 
@@ -197,8 +203,192 @@ class TestPydanticModels:
         """Test model serialization excluding None values."""
         args = BackupArgs(output_dir="/tmp/backup")
         dumped = args.model_dump(exclude_none=True)
-        
+
         assert "output_dir" in dumped
         assert "collection" not in dumped  # None value excluded
         assert "collections" not in dumped  # None value excluded
         assert "doc_limit" not in dumped  # None value excluded
+
+
+class TestGraphManagementModels:
+    """Test cases for new graph management Pydantic models."""
+
+    def test_backup_graph_args_valid(self):
+        """Test BackupGraphArgs with valid inputs."""
+        args = BackupGraphArgs(
+            graph_name="social_network",
+            output_dir="/tmp/graph_backup",
+            include_metadata=True,
+            doc_limit=1000
+        )
+        assert args.graph_name == "social_network"
+        assert args.output_dir == "/tmp/graph_backup"
+        assert args.include_metadata is True
+        assert args.doc_limit == 1000
+
+    def test_backup_graph_args_minimal(self):
+        """Test BackupGraphArgs with minimal required fields."""
+        args = BackupGraphArgs(graph_name="test_graph")
+        assert args.graph_name == "test_graph"
+        assert args.output_dir is None
+        assert args.include_metadata is True  # default
+        assert args.doc_limit is None
+
+    def test_backup_graph_args_aliases(self):
+        """Test BackupGraphArgs with field aliases."""
+        args = BackupGraphArgs(
+            graph_name="test",
+            outputDir="/tmp/backup",
+            includeMetadata=False,
+            docLimit=500
+        )
+        assert args.output_dir == "/tmp/backup"
+        assert args.include_metadata is False
+        assert args.doc_limit == 500
+
+    def test_backup_graph_args_validation_error(self):
+        """Test BackupGraphArgs validation errors."""
+        with pytest.raises(ValidationError):
+            BackupGraphArgs()  # Missing required graph_name
+
+        with pytest.raises(ValidationError):
+            BackupGraphArgs(graph_name="test", doc_limit=0)  # doc_limit must be >= 1
+
+    def test_restore_graph_args_valid(self):
+        """Test RestoreGraphArgs with valid inputs."""
+        args = RestoreGraphArgs(
+            input_dir="/tmp/backup",
+            graph_name="restored_graph",
+            conflict_resolution="overwrite",
+            validate_integrity=False
+        )
+        assert args.input_dir == "/tmp/backup"
+        assert args.graph_name == "restored_graph"
+        assert args.conflict_resolution == "overwrite"
+        assert args.validate_integrity is False
+
+    def test_restore_graph_args_minimal(self):
+        """Test RestoreGraphArgs with minimal required fields."""
+        args = RestoreGraphArgs(input_dir="/tmp/backup")
+        assert args.input_dir == "/tmp/backup"
+        assert args.graph_name is None
+        assert args.conflict_resolution == "error"  # default
+        assert args.validate_integrity is True  # default
+
+    def test_restore_graph_args_aliases(self):
+        """Test RestoreGraphArgs with field aliases."""
+        args = RestoreGraphArgs(
+            inputDir="/tmp/backup",
+            graphName="test",
+            conflictResolution="skip",
+            validateIntegrity=False
+        )
+        assert args.input_dir == "/tmp/backup"
+        assert args.graph_name == "test"
+        assert args.conflict_resolution == "skip"
+        assert args.validate_integrity is False
+
+    def test_restore_graph_args_validation_error(self):
+        """Test RestoreGraphArgs validation errors."""
+        with pytest.raises(ValidationError):
+            RestoreGraphArgs()  # Missing required input_dir
+
+        with pytest.raises(ValidationError):
+            RestoreGraphArgs(input_dir="/tmp", conflict_resolution="invalid")  # Invalid literal
+
+    def test_backup_named_graphs_args_valid(self):
+        """Test BackupNamedGraphsArgs with valid inputs."""
+        args = BackupNamedGraphsArgs(
+            output_file="/tmp/graphs.json",
+            graph_names=["graph1", "graph2"]
+        )
+        assert args.output_file == "/tmp/graphs.json"
+        assert args.graph_names == ["graph1", "graph2"]
+
+    def test_backup_named_graphs_args_minimal(self):
+        """Test BackupNamedGraphsArgs with minimal fields."""
+        args = BackupNamedGraphsArgs()
+        assert args.output_file is None
+        assert args.graph_names is None
+
+    def test_backup_named_graphs_args_aliases(self):
+        """Test BackupNamedGraphsArgs with field aliases."""
+        args = BackupNamedGraphsArgs(
+            outputFile="/tmp/backup.json",
+            graphNames=["test_graph"]
+        )
+        assert args.output_file == "/tmp/backup.json"
+        assert args.graph_names == ["test_graph"]
+
+    def test_validate_graph_integrity_args_valid(self):
+        """Test ValidateGraphIntegrityArgs with valid inputs."""
+        args = ValidateGraphIntegrityArgs(
+            graph_name="test_graph",
+            check_orphaned_edges=False,
+            check_constraints=False,
+            return_details=True
+        )
+        assert args.graph_name == "test_graph"
+        assert args.check_orphaned_edges is False
+        assert args.check_constraints is False
+        assert args.return_details is True
+
+    def test_validate_graph_integrity_args_defaults(self):
+        """Test ValidateGraphIntegrityArgs with default values."""
+        args = ValidateGraphIntegrityArgs()
+        assert args.graph_name is None
+        assert args.check_orphaned_edges is True  # default
+        assert args.check_constraints is True  # default
+        assert args.return_details is False  # default
+
+    def test_validate_graph_integrity_args_aliases(self):
+        """Test ValidateGraphIntegrityArgs with field aliases."""
+        args = ValidateGraphIntegrityArgs(
+            graphName="test",
+            checkOrphanedEdges=False,
+            checkConstraints=False,
+            returnDetails=True
+        )
+        assert args.graph_name == "test"
+        assert args.check_orphaned_edges is False
+        assert args.check_constraints is False
+        assert args.return_details is True
+
+    def test_graph_statistics_args_valid(self):
+        """Test GraphStatisticsArgs with valid inputs."""
+        args = GraphStatisticsArgs(
+            graph_name="analytics_graph",
+            include_degree_distribution=False,
+            include_connectivity=False,
+            sample_size=500
+        )
+        assert args.graph_name == "analytics_graph"
+        assert args.include_degree_distribution is False
+        assert args.include_connectivity is False
+        assert args.sample_size == 500
+
+    def test_graph_statistics_args_defaults(self):
+        """Test GraphStatisticsArgs with default values."""
+        args = GraphStatisticsArgs()
+        assert args.graph_name is None
+        assert args.include_degree_distribution is True  # default
+        assert args.include_connectivity is True  # default
+        assert args.sample_size is None
+
+    def test_graph_statistics_args_aliases(self):
+        """Test GraphStatisticsArgs with field aliases."""
+        args = GraphStatisticsArgs(
+            graphName="test",
+            includeDegreeDistribution=False,
+            includeConnectivity=False,
+            sampleSize=200
+        )
+        assert args.graph_name == "test"
+        assert args.include_degree_distribution is False
+        assert args.include_connectivity is False
+        assert args.sample_size == 200
+
+    def test_graph_statistics_args_validation_error(self):
+        """Test GraphStatisticsArgs validation errors."""
+        with pytest.raises(ValidationError):
+            GraphStatisticsArgs(sample_size=50)  # sample_size must be >= 100

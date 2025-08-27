@@ -39,6 +39,13 @@ Graph Tools:
     - ARANGO_GRAPH_TRAVERSAL (alias of ARANGO_TRAVERSE)
     - ARANGO_ADD_VERTEX (alias of ARANGO_INSERT)
 
+Graph Management Tools:
+    - ARANGO_BACKUP_GRAPH
+    - ARANGO_RESTORE_GRAPH
+    - ARANGO_BACKUP_NAMED_GRAPHS
+    - ARANGO_VALIDATE_GRAPH_INTEGRITY
+    - ARANGO_GRAPH_STATISTICS
+
 Schema & Enhanced Query Tools:
     - ARANGO_CREATE_SCHEMA
     - ARANGO_VALIDATE_DOCUMENT
@@ -87,3 +94,10 @@ ARANGO_VALIDATE_DOCUMENT = "arango_validate_document"
 # Enhanced query tools
 ARANGO_QUERY_BUILDER = "arango_query_builder"
 ARANGO_QUERY_PROFILE = "arango_query_profile"
+
+# Graph Management Tools (Phase 5 - New Graph Tools)
+ARANGO_BACKUP_GRAPH = "arango_backup_graph"
+ARANGO_RESTORE_GRAPH = "arango_restore_graph"
+ARANGO_BACKUP_NAMED_GRAPHS = "arango_backup_named_graphs"
+ARANGO_VALIDATE_GRAPH_INTEGRITY = "arango_validate_graph_integrity"
+ARANGO_GRAPH_STATISTICS = "arango_graph_statistics"

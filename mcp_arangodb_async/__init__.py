@@ -1,7 +1,7 @@
 """
 ArangoDB MCP Server - Package Initialization
 
-This module defines the public API for the mcp_arangodb package.
+This module defines the public API for the mcp_arangodb_async package.
 Exports core configuration and database connection utilities.
 
 Exported Functions:

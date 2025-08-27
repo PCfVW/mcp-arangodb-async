@@ -61,7 +61,7 @@ def arango_env() -> Dict[str, str]:
 async def _run_with_session(env: Dict[str, str], coro):
     server_params = StdioServerParameters(
         command="py",
-        args=["-m", "mcp_arangodb.entry"],
+        args=["-m", "mcp_arangodb_async.entry"],
         env=env,
     )
     async with stdio_client(server_params) as (read, write):

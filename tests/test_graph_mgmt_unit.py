@@ -3,16 +3,16 @@ import os
 import types
 import pytest
 
-from mcp_arangodb.handlers import (
+from mcp_arangodb_async.handlers import (
     handle_list_graphs,
     handle_add_vertex_collection,
     handle_add_edge_definition,
 )
-from mcp_arangodb.tools import (
+from mcp_arangodb_async.tools import (
     ARANGO_TRAVERSE,
     ARANGO_GRAPH_TRAVERSAL,
 )
-from mcp_arangodb import entry as entry_mod
+from mcp_arangodb_async import entry as entry_mod
 
 
 class DummyGraph:

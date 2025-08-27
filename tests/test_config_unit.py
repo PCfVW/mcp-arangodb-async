@@ -3,7 +3,7 @@
 import pytest
 import os
 from unittest.mock import patch
-from mcp_arangodb.config import Config, load_config, validate_config
+from mcp_arangodb_async.config import Config, load_config, validate_config
 
 
 class TestConfig:

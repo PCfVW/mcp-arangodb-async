@@ -1,7 +1,7 @@
 import pytest
-from mcp_arangodb import entry as entry_mod
-from mcp_arangodb.tools import ARANGO_ADD_VERTEX
-from mcp_arangodb.models import InsertArgs
+from mcp_arangodb_async import entry as entry_mod
+from mcp_arangodb_async.tools import ARANGO_ADD_VERTEX
+from mcp_arangodb_async.models import InsertArgs
 
 
 class DummyCollection:

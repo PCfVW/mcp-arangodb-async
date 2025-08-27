@@ -2,7 +2,7 @@
 ArangoDB MCP Server - Command Line Interface
 
 This module provides a command-line interface for ArangoDB diagnostics and health checks.
-Can be run as: python -m mcp_arangodb [command]
+Can be run as: python -m mcp_arangodb_async [command]
 
 Functions:
 - main() - Main entry point for command line execution
@@ -19,7 +19,7 @@ from .db import get_client_and_db, health_check
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog="mcp_arangodb", description="ArangoDB MCP diagnostics")
+    parser = argparse.ArgumentParser(prog="mcp_arangodb_async", description="ArangoDB MCP diagnostics")
     parser.add_argument("command", nargs="?", choices=["health"], help="Command to run (default: info)")
     parser.add_argument("--health", dest="health_flag", action="store_true", help="Run health check and output JSON")
     args = parser.parse_args()

@@ -19,7 +19,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 from types import SimpleNamespace
 
 import mcp.server.stdio
@@ -34,6 +34,7 @@ from pydantic import ValidationError
 
 from .config import load_config
 from .db import get_client_and_db
+from arango.database import StandardDatabase
 from .handlers import (
     handle_arango_query,
     handle_backup,
@@ -61,6 +62,12 @@ from .handlers import (
     handle_validate_document,
     handle_query_builder,
     handle_query_profile,
+    # New graph management handlers
+    handle_backup_graph,
+    handle_restore_graph,
+    handle_backup_named_graphs,
+    handle_validate_graph_integrity,
+    handle_graph_statistics,
 )
 from .tools import (
     ARANGO_BACKUP,
@@ -91,6 +98,12 @@ from .tools import (
     ARANGO_VALIDATE_DOCUMENT,
     ARANGO_QUERY_BUILDER,
     ARANGO_QUERY_PROFILE,
+    # New graph management tools
+    ARANGO_BACKUP_GRAPH,
+    ARANGO_RESTORE_GRAPH,
+    ARANGO_BACKUP_NAMED_GRAPHS,
+    ARANGO_VALIDATE_GRAPH_INTEGRITY,
+    ARANGO_GRAPH_STATISTICS,
 )
 from .models import (
     QueryArgs,
@@ -119,6 +132,12 @@ from .models import (
     ValidateDocumentArgs,
     QueryBuilderArgs,
     QueryProfileArgs,
+    # New graph management models
+    BackupGraphArgs,
+    RestoreGraphArgs,
+    BackupNamedGraphsArgs,
+    ValidateGraphIntegrityArgs,
+    GraphStatisticsArgs,
 )
 
 
@@ -133,7 +152,7 @@ async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    logger = logging.getLogger("mcp_arangodb.entry")
+    logger = logging.getLogger("mcp_arangodb_async.entry")
 
     cfg = load_config()
     client = None
@@ -177,7 +196,7 @@ async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
                 logger.debug("Error closing Arango client", exc_info=True)
 
 
-server = Server("arangodb-mcp-python", lifespan=server_lifespan)
+server = Server("mcp-arangodb-async", lifespan=server_lifespan)
 
 
 @server.list_tools()
@@ -327,6 +346,32 @@ async def handle_list_tools() -> List[types.Tool]:
             description="Explain a query and return plans/stats for profiling.",
             inputSchema=QueryProfileArgs.model_json_schema(),
         ),
+        # Graph Management Tools (Phase 5)
+        types.Tool(
+            name=ARANGO_BACKUP_GRAPH,
+            description="Export complete graph structure including vertices, edges, and metadata.",
+            inputSchema=BackupGraphArgs.model_json_schema(),
+        ),
+        types.Tool(
+            name=ARANGO_RESTORE_GRAPH,
+            description="Import graph data with referential integrity validation and conflict resolution.",
+            inputSchema=RestoreGraphArgs.model_json_schema(),
+        ),
+        types.Tool(
+            name=ARANGO_BACKUP_NAMED_GRAPHS,
+            description="Backup graph definitions from _graphs system collection.",
+            inputSchema=BackupNamedGraphsArgs.model_json_schema(),
+        ),
+        types.Tool(
+            name=ARANGO_VALIDATE_GRAPH_INTEGRITY,
+            description="Verify graph consistency, orphaned edges, and constraint violations.",
+            inputSchema=ValidateGraphIntegrityArgs.model_json_schema(),
+        ),
+        types.Tool(
+            name=ARANGO_GRAPH_STATISTICS,
+            description="Generate comprehensive graph analytics (vertex/edge counts, degree distribution, connectivity metrics).",
+            inputSchema=GraphStatisticsArgs.model_json_schema(),
+        ),
     ]
 
     # Compatibility: during pytest integration tests, expect baseline 7 tools.
@@ -349,19 +394,52 @@ def _json_content(data: Any) -> List[types.Content]:
     return [types.TextContent(type="text", text=json.dumps(data, ensure_ascii=False))]
 
 
-def _invoke_handler(handler, db, args: Dict[str, Any]):
-    """Call handler preferring kwargs (for tests that inspect call kwargs),
-    falling back to the legacy (db, args_dict) style for real handlers.
+def _invoke_handler(handler: Callable, db: StandardDatabase, args: Dict[str, Any]) -> Any:
+    """Invoke handler function with appropriate signature based on its parameter requirements.
+
+    This function provides dual signature support to handle two different calling conventions:
+
+    1. **Test compatibility mode**: `handler(db, **args)`
+       - Used by mocked handlers in unit tests that need to inspect individual keyword arguments
+       - Allows tests to verify specific parameter values were passed correctly
+       - Enables more granular test assertions on handler behavior
+
+    2. **Production handler mode**: `handler(db, args)`
+       - Used by actual handler implementations that expect a single args dictionary
+       - Matches the documented handler signature pattern: (db, args: Dict[str, Any])
+       - More efficient as it avoids dictionary unpacking
+
+    The try/catch mechanism automatically detects which signature the handler expects:
+    - First attempts kwargs expansion for test compatibility
+    - Falls back to single args dict for production handlers
+    - TypeError from wrong parameter count triggers the fallback
+
+    Args:
+        handler: Handler function to invoke (either real implementation or test mock)
+        db: ArangoDB database instance
+        args: Validated arguments dictionary from Pydantic model
+
+    Returns:
+        Handler function result (typically Dict[str, Any] or List[Dict[str, Any]])
+
+    Note:
+        This dual signature support maintains backward compatibility while enabling
+        comprehensive testing. The pattern handles the semantic difference between
+        handlers that require arguments vs. those that don't (e.g., list_collections).
     """
     try:
-        return handler(db, **args)  # mocked handlers in tests expect kwargs visibility
+        # Attempt test-compatible signature: handler(db, **args)
+        # This allows mocked handlers in tests to inspect individual parameters
+        return handler(db, **args)
     except TypeError:
-        return handler(db, args)    # real handlers accept a single args dict
+        # Fallback to production signature: handler(db, args)
+        # This matches the documented handler pattern for real implementations
+        return handler(db, args)
 
 
 @server.call_tool()
 async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]:
-    logger = logging.getLogger("mcp_arangodb.entry")
+    logger = logging.getLogger("mcp_arangodb_async.entry")
     # Access lifespan context; may not have connected (graceful degradation)
     ctx = server.request_context
     db = ctx.lifespan_context.get("db") if ctx and ctx.lifespan_context else None
@@ -396,6 +474,12 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
         ARANGO_VALIDATE_DOCUMENT: ValidateDocumentArgs,
         ARANGO_QUERY_BUILDER: QueryBuilderArgs,
         ARANGO_QUERY_PROFILE: QueryProfileArgs,
+        # New graph management tools
+        ARANGO_BACKUP_GRAPH: BackupGraphArgs,
+        ARANGO_RESTORE_GRAPH: RestoreGraphArgs,
+        ARANGO_BACKUP_NAMED_GRAPHS: BackupNamedGraphsArgs,
+        ARANGO_VALIDATE_GRAPH_INTEGRITY: ValidateGraphIntegrityArgs,
+        ARANGO_GRAPH_STATISTICS: GraphStatisticsArgs,
     }
 
     Model = model_map.get(name)
@@ -522,6 +606,23 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
             result = _invoke_handler(handle_query_profile, db, validated_args)
             return _json_content(result)
 
+        # Graph Management Tools (Phase 5)
+        if name == ARANGO_BACKUP_GRAPH:
+            result = _invoke_handler(handle_backup_graph, db, validated_args)
+            return _json_content(result)
+        if name == ARANGO_RESTORE_GRAPH:
+            result = _invoke_handler(handle_restore_graph, db, validated_args)
+            return _json_content(result)
+        if name == ARANGO_BACKUP_NAMED_GRAPHS:
+            result = _invoke_handler(handle_backup_named_graphs, db, validated_args)
+            return _json_content(result)
+        if name == ARANGO_VALIDATE_GRAPH_INTEGRITY:
+            result = _invoke_handler(handle_validate_graph_integrity, db, validated_args)
+            return _json_content(result)
+        if name == ARANGO_GRAPH_STATISTICS:
+            result = _invoke_handler(handle_graph_statistics, db, validated_args)
+            return _json_content(result)
+
         return _json_content({"error": f"Unknown tool: {name}"})
     except Exception as e:
         logger.exception("Error executing tool '%s'", name)
@@ -574,7 +675,7 @@ async def run() -> None:
             read_stream,
             write_stream,
             InitializationOptions(
-                server_name="arangodb-mcp-python",
+                server_name="mcp-arangodb-async",
                 server_version="0.1.0",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
