@@ -6,7 +6,7 @@
 [![Graph Tools](https://img.shields.io/badge/Graph_Tools-Enhanced-orange)](https://docs.arangodb.com/stable/graphs/)
 
 
-A comprehensive, production-ready MCP stdio server exposing advanced ArangoDB operations to MCP clients (Claude Desktop, Augment Code). Features async-first Python architecture, wrapping the official `python-arango` driver with graph management capabilities, flexiblecontent conversion utilities (JSON, Markdown, YAML and Table), comprehensive backup/restore functionality, and analytics capabilities.
+A comprehensive, production-ready MCP stdio server exposing advanced ArangoDB operations to MCP clients (Claude Desktop, Augment Code). Features async-first Python architecture, wrapping the official `python-arango` driver with graph management capabilities, flexible content conversion utilities (JSON, Markdown, YAML and Table), comprehensive backup/restore functionality, and basic analytics capabilities.
 
 
 ---
