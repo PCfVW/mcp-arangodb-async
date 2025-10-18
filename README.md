@@ -146,7 +146,7 @@ Add this server entry to your Claude MCP config:
   "mcpServers": {
     "arangodb": {
       "command": "python",
-      "args": ["-m", "mcp_arangodb_async"],
+      "args": ["-m", "mcp_arangodb_async", "server"],
       "env": {
         "ARANGO_URL": "http://localhost:8529",
         "ARANGO_DB": "mcp_arangodb_test",
@@ -171,6 +171,7 @@ Add this server entry to your Claude MCP config:
   "mcpServers": {
     "arangodb": {
       "command": "mcp-arangodb-async",
+      "args": ["server"],
       "env": {
         "ARANGO_URL": "http://localhost:8529",
         "ARANGO_DB": "mcp_arangodb_test",

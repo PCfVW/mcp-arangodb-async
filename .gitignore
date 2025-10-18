@@ -57,3 +57,4 @@ Thumbs.db
 # Exclude all PDFs from the repository
 **/*.pdf
 gitignore/
+graph_backups/

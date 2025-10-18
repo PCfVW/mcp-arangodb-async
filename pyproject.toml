@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-arangodb-async"
-version = "0.2.0"
+version = "0.2.1"
 description = "A Model Context Protocol server for ArangoDB"
 readme = "README.md"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ authors = [
 ]
 keywords = ["mcp", "mcp-server", "model-context-protocol", "async", "arangodb", "database", "aql", "graph"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",

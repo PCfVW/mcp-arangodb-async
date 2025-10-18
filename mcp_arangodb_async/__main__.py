@@ -20,15 +20,32 @@ from .db import get_client_and_db, health_check
 
 def main() -> int:
     parser = argparse.ArgumentParser(prog="mcp_arangodb_async", description="ArangoDB MCP diagnostics")
-    parser.add_argument("command", nargs="?", choices=["health"], help="Command to run (default: info)")
+    parser.add_argument("command", nargs="?", choices=["health", "server"], help="Command to run (default: server)")
     parser.add_argument("--health", dest="health_flag", action="store_true", help="Run health check and output JSON")
+    parser.add_argument("--server", dest="server_flag", action="store_true", help="Run MCP server (default when no args)")
     args = parser.parse_args()
+
+    # Determine mode: if no command and no flags, default to MCP server
+    run_health = args.command == "health" or args.health_flag
+    run_server = args.command == "server" or args.server_flag or (args.command is None and not args.health_flag)
+
+    # Delegate to MCP server entry point
+    if run_server:
+        try:
+            from .entry import main as entry_main
+            entry_main()  # This never returns (runs async event loop)
+            return 0
+        except ImportError as e:
+            print(f"Error: Could not import MCP server entry point: {e}", file=sys.stderr)
+            print("Please ensure the package is properly installed.", file=sys.stderr)
+            return 1
+        except Exception as e:
+            print(f"Error starting MCP server: {e}", file=sys.stderr)
+            return 1
 
     cfg = load_config()
 
-    # Determine mode
-    run_health = args.command == "health" or args.health_flag
-
+    # CLI diagnostic mode (health check or info)
     try:
         client, db = get_client_and_db(cfg)
         if run_health:
