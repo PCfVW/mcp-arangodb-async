@@ -409,3 +409,8 @@ class GraphStatisticsArgs(BaseModel):
         alias="perCollectionStats",
         description="Provide detailed per-collection statistics breakdown"
     )
+
+
+class ArangoDatabaseStatusArgs(BaseModel):
+    """Arguments for arango_database_status tool (no parameters required)."""
+    pass

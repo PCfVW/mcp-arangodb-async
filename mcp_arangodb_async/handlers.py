@@ -128,6 +128,7 @@ from .tools import (
     ARANGO_BACKUP_NAMED_GRAPHS,
     ARANGO_VALIDATE_GRAPH_INTEGRITY,
     ARANGO_GRAPH_STATISTICS,
+    ARANGO_DATABASE_STATUS,
 )
 
 # Configure logger for handlers
@@ -224,6 +225,7 @@ from .models import (
     BackupNamedGraphsArgs,
     ValidateGraphIntegrityArgs,
     GraphStatisticsArgs,
+    ArangoDatabaseStatusArgs,
 )
 
 
@@ -1600,6 +1602,67 @@ def handle_graph_statistics(db: StandardDatabase, args: Dict[str, Any]) -> Dict[
         aggregate_collections,
         per_collection_stats
     )
+
+
+@register_tool(
+    name=ARANGO_DATABASE_STATUS,
+    description="Check database connection status and return diagnostic information.",
+    model=ArangoDatabaseStatusArgs,
+)
+@handle_errors
+def handle_arango_database_status(db: StandardDatabase, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Check database connection status and return diagnostic information.
+
+    This tool provides visibility into the database connection state, which is
+    especially useful when the database is unavailable at startup or during
+    operation. It complements MCP protocol logging by providing a proactive
+    way for users to check connection status.
+
+    Operator model:
+      Preconditions:
+        - None (works even when database is unavailable)
+      Effects:
+        - Returns connection status (connected: true/false)
+        - If connected: returns server version and database name
+        - If not connected: returns diagnostic information
+        - No database mutations
+    """
+    # Check if database connection is available
+    if db is None:
+        import os
+        return {
+            "connected": False,
+            "message": "Database connection is not available",
+            "config": {
+                "url": os.getenv("ARANGO_URL", "http://localhost:8529"),
+                "database": os.getenv("ARANGO_DB", "_system"),
+            },
+            "suggestion": "Please ensure ArangoDB is running and accessible. Check ARANGO_URL and ARANGO_DB environment variables."
+        }
+
+    # Database is connected - get server info
+    try:
+        version_info = db.version()
+        server_version = version_info if isinstance(version_info, str) else version_info.get("version", "unknown")
+
+        return {
+            "connected": True,
+            "database": db.name,
+            "server_version": server_version,
+            "message": "Database connection is active"
+        }
+    except Exception as e:
+        # Connection exists but query failed
+        import os
+        return {
+            "connected": False,
+            "message": f"Database connection exists but query failed: {str(e)}",
+            "config": {
+                "url": os.getenv("ARANGO_URL", "http://localhost:8529"),
+                "database": os.getenv("ARANGO_DB", "_system"),
+            },
+            "suggestion": "Database connection may be stale or server may be unresponsive."
+        }
 
 
 # Register aliases for backward compatibility

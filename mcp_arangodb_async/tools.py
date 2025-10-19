@@ -101,3 +101,6 @@ ARANGO_RESTORE_GRAPH = "arango_restore_graph"
 ARANGO_BACKUP_NAMED_GRAPHS = "arango_backup_named_graphs"
 ARANGO_VALIDATE_GRAPH_INTEGRITY = "arango_validate_graph_integrity"
 ARANGO_GRAPH_STATISTICS = "arango_graph_statistics"
+
+# Database Status Tool
+ARANGO_DATABASE_STATUS = "arango_database_status"

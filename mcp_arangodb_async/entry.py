@@ -352,8 +352,30 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
                 ctx.lifespan_context["client"] = client
             db = db_conn
             logger.info("Lazy DB connect succeeded during tool call: db=%s", cfg.database)
-        except Exception:
+        except Exception as e:
             logger.warning("Lazy DB connect failed; returning Database unavailable", exc_info=True)
+
+            # Send MCP log notification to client (if session available)
+            if ctx and hasattr(ctx, 'session') and ctx.session:
+                try:
+                    await ctx.session.send_log_message(
+                        level="error",
+                        data={
+                            "error": "Database unavailable",
+                            "message": "ArangoDB connection could not be established",
+                            "tool": name,
+                            "suggestion": "Please ensure ArangoDB is running and accessible",
+                            "config": {
+                                "url": os.getenv("ARANGO_URL", "http://localhost:8529"),
+                                "database": os.getenv("ARANGO_DB", "_system"),
+                            },
+                            "exception": str(e)
+                        },
+                        logger="mcp_arangodb_async.database"
+                    )
+                except Exception as log_err:
+                    logger.debug(f"Failed to send MCP log notification: {log_err}")
+
             return _json_content({
                 "error": "Database unavailable",
                 "tool": name,
