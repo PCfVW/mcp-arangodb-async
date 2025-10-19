@@ -160,7 +160,10 @@ def handle_errors(func):
     The _invoke_handler function in entry.py provides additional signature detection
     for test compatibility, but this decorator handles the core dual signature support.
     """
-    def wrapper(db: StandardDatabase, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+
+    def wrapper(
+        db: StandardDatabase, args: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         try:
             # Handle parameter-less operations (e.g., list_collections)
             # These handlers accept Optional[Dict[str, Any]] = None in their signature
@@ -172,13 +175,20 @@ def handle_errors(func):
                 return func(db, args)
         except KeyError as e:
             logger.error(f"Missing required parameter in {func.__name__}: {e}")
-            return {"error": f"Missing required parameter: {str(e)}", "type": "KeyError"}
+            return {
+                "error": f"Missing required parameter: {str(e)}",
+                "type": "KeyError",
+            }
         except ArangoError as e:
             logger.error(f"ArangoDB error in {func.__name__}: {e}")
-            return {"error": f"Database operation failed: {str(e)}", "type": "ArangoError"}
+            return {
+                "error": f"Database operation failed: {str(e)}",
+                "type": "ArangoError",
+            }
         except Exception as e:
             logger.exception(f"Unexpected error in {func.__name__}")
             return {"error": f"Operation failed: {str(e)}", "type": type(e).__name__}
+
     return wrapper
 
 
@@ -188,11 +198,13 @@ def safe_cursor(cursor):
     try:
         yield cursor
     finally:
-        if hasattr(cursor, 'close'):
+        if hasattr(cursor, "close"):
             try:
                 cursor.close()
             except Exception:
                 pass  # Ignore cleanup errors
+
+
 from .models import (
     QueryArgs,
     ListCollectionsArgs,
@@ -235,7 +247,9 @@ from .models import (
     description="Execute an AQL query with optional bind vars and return rows.",
     model=QueryArgs,
 )
-def handle_arango_query(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
+def handle_arango_query(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> List[Dict[str, Any]]:
     """Execute an AQL query with optional bind vars and return the result list.
 
     This mirrors the TS tool `arango_query` behavior at a high level.
@@ -259,7 +273,9 @@ def handle_arango_query(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict
     description="List non-system collection names.",
     model=ListCollectionsArgs,
 )
-def handle_list_collections(db: StandardDatabase, args: Optional[Dict[str, Any]] = None) -> List[str]:
+def handle_list_collections(
+    db: StandardDatabase, args: Optional[Dict[str, Any]] = None
+) -> List[str]:
     """Return non-system collection names (document + edge).
 
     Note: This handler uses Optional[Dict[str, Any]] = None signature pattern because:
@@ -319,11 +335,18 @@ def handle_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
 
     # Validate collection exists
     if not db.has_collection(collection_name):
-        return {"error": f"Collection '{collection_name}' does not exist", "type": "CollectionNotFound"}
+        return {
+            "error": f"Collection '{collection_name}' does not exist",
+            "type": "CollectionNotFound",
+        }
 
     col = db.collection(collection_name)
     result = col.insert(document)
-    return {"_id": result.get("_id"), "_key": result.get("_key"), "_rev": result.get("_rev")}
+    return {
+        "_id": result.get("_id"),
+        "_key": result.get("_key"),
+        "_rev": result.get("_rev"),
+    }
 
 
 @handle_errors
@@ -356,12 +379,19 @@ def handle_update(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
 
     # Validate collection exists
     if not db.has_collection(collection_name):
-        return {"error": f"Collection '{collection_name}' does not exist", "type": "CollectionNotFound"}
+        return {
+            "error": f"Collection '{collection_name}' does not exist",
+            "type": "CollectionNotFound",
+        }
 
     col = db.collection(collection_name)
     payload = {"_key": key, **update_data}
     result = col.update(payload)
-    return {"_id": result.get("_id"), "_key": result.get("_key"), "_rev": result.get("_rev")}
+    return {
+        "_id": result.get("_id"),
+        "_key": result.get("_key"),
+        "_rev": result.get("_rev"),
+    }
 
 
 @handle_errors
@@ -393,11 +423,18 @@ def handle_remove(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
 
     # Validate collection exists
     if not db.has_collection(collection_name):
-        return {"error": f"Collection '{collection_name}' does not exist", "type": "CollectionNotFound"}
+        return {
+            "error": f"Collection '{collection_name}' does not exist",
+            "type": "CollectionNotFound",
+        }
 
     col = db.collection(collection_name)
     result = col.delete(key)
-    return {"_id": result.get("_id"), "_key": result.get("_key"), "_rev": result.get("_rev")}
+    return {
+        "_id": result.get("_id"),
+        "_key": result.get("_key"),
+        "_rev": result.get("_rev"),
+    }
 
 
 @handle_errors
@@ -406,7 +443,9 @@ def handle_remove(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     description="Create a collection (document or edge).",
     model=CreateCollectionArgs,
 )
-def handle_create_collection(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_create_collection(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Create a collection (document or edge) or get existing one.
 
     Args:
@@ -483,7 +522,9 @@ def handle_backup(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
         collections = [single_collection]
 
     doc_limit = args.get("doc_limit") or args.get("docLimit")
-    report = backup_collections_to_dir(db, output_dir=output_dir, collections=collections, doc_limit=doc_limit)
+    report = backup_collections_to_dir(
+        db, output_dir=output_dir, collections=collections, doc_limit=doc_limit
+    )
     return report
 
 
@@ -493,7 +534,9 @@ def handle_backup(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     description="List indexes for a collection.",
     model=ListIndexesArgs,
 )
-def handle_list_indexes(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
+def handle_list_indexes(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> List[Dict[str, Any]]:
     """List indexes for a given collection (simplified fields).
 
     Operator model:
@@ -507,15 +550,17 @@ def handle_list_indexes(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict
     indexes = col.indexes()  # list of dicts
     simplified: List[Dict[str, Any]] = []
     for ix in indexes:
-        simplified.append({
-            "id": ix.get("id"),
-            "type": ix.get("type"),
-            "fields": ix.get("fields"),
-            "unique": ix.get("unique"),
-            "sparse": ix.get("sparse"),
-            "name": ix.get("name"),
-            "selectivityEstimate": ix.get("selectivityEstimate"),
-        })
+        simplified.append(
+            {
+                "id": ix.get("id"),
+                "type": ix.get("type"),
+                "fields": ix.get("fields"),
+                "unique": ix.get("unique"),
+                "sparse": ix.get("sparse"),
+                "name": ix.get("name"),
+                "selectivityEstimate": ix.get("selectivityEstimate"),
+            }
+        )
     return simplified
 
 
@@ -541,59 +586,48 @@ def handle_create_index(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
     col = db.collection(args["collection"])
     ix_type = args.get("type", "persistent")
     fields = args["fields"]
-    unique = bool(args.get("unique", False))
-    sparse = bool(args.get("sparse", False))
-    deduplicate = bool(args.get("deduplicate", True))
-    name = args.get("name")
-    in_background = args.get("inBackground")
 
-    if ix_type == "persistent":
-        created = col.add_persistent_index(
-            fields,
-            unique=unique,
-            sparse=sparse,
-            deduplicate=deduplicate,
-            name=name,
-            in_background=in_background,
-        )
-    elif ix_type == "hash":
-        created = col.add_hash_index(
-            fields,
-            unique=unique,
-            sparse=sparse,
-            deduplicate=deduplicate,
-            name=name,
-            in_background=in_background,
-        )
-    elif ix_type == "skiplist":
-        created = col.add_skiplist_index(
-            fields,
-            unique=unique,
-            sparse=sparse,
-            deduplicate=deduplicate,
-            name=name,
-            in_background=in_background,
-        )
-    elif ix_type == "ttl":
+    # Build index data dictionary for unified add_index() API (python-arango 8.x)
+    index_data = {
+        "type": ix_type,
+        "fields": fields,
+    }
+
+    # Add common optional parameters
+    if args.get("unique") is not None:
+        index_data["unique"] = bool(args["unique"])
+    if args.get("sparse") is not None:
+        index_data["sparse"] = bool(args["sparse"])
+    if args.get("deduplicate") is not None:
+        index_data["deduplicate"] = bool(args["deduplicate"])
+    if args.get("name") is not None:
+        index_data["name"] = args["name"]
+    if args.get("inBackground") is not None:
+        index_data["inBackground"] = args["inBackground"]
+
+    # Add type-specific parameters
+    if ix_type == "ttl":
         # TTL index requires a single field and expireAfter seconds
         if not fields or len(fields) != 1:
             raise ValueError("TTL index requires exactly one field in 'fields'")
         expire_after = args.get("ttl") or args.get("expireAfter")
         if expire_after is None:
             raise ValueError("TTL index requires 'ttl' (expireAfter seconds)")
-        created = col.add_ttl_index(fields[0], expire_after, name=name, in_background=in_background)
+        index_data["expireAfter"] = expire_after
     elif ix_type == "fulltext":
-        # Fulltext index supports min_length optionally; driver may accept it via keyword
-        min_length = args.get("minLength")
-        created = col.add_fulltext_index(fields, min_length=min_length, name=name, in_background=in_background)
+        # Fulltext index supports minLength optionally
+        if args.get("minLength") is not None:
+            index_data["minLength"] = args["minLength"]
     elif ix_type == "geo":
-        # Geo index can be on one or two fields; geo_json optional
-        geo_json = args.get("geoJson")
-        created = col.add_geo_index(fields, geo_json=geo_json, name=name, in_background=in_background)
-    else:
-        raise ValueError(f"Unknown index type: {ix_type}")
+        # Geo index can be on one or two fields; geoJson optional
+        if args.get("geoJson") is not None:
+            index_data["geoJson"] = args["geoJson"]
 
-    # created is dict with index info
+    # Use unified add_index() method (python-arango 8.x recommended API)
+    # formatter=True for backward compatibility with snake_case field names
+    created = col.add_index(index_data, formatter=True)
+
+    # Return formatted index info
     return {
         "id": created.get("id"),
         "type": created.get("type"),
@@ -634,7 +668,9 @@ def handle_delete_index(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
                 index_id = ix.get("id")
                 break
         else:
-            raise ValueError(f"Index with name '{id_or_name}' not found in collection '{collection}'")
+            raise ValueError(
+                f"Index with name '{id_or_name}' not found in collection '{collection}'"
+            )
 
     # If the id did not include a slash, prepend collection name
     if "/" not in index_id:
@@ -662,7 +698,9 @@ def handle_explain_query(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
         - No database mutations are performed.
     """
     explain = db.aql.explain(
-        args["query"], bind_vars=args.get("bind_vars") or {}, max_plans=int(args.get("max_plans", 1))
+        args["query"],
+        bind_vars=args.get("bind_vars") or {},
+        max_plans=int(args.get("max_plans", 1)),
     )
     result: Dict[str, Any] = {
         "plans": explain.get("plans") or [],
@@ -670,11 +708,15 @@ def handle_explain_query(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
         "stats": explain.get("stats") or {},
     }
     if args.get("suggest_indexes", True):
-        result["index_suggestions"] = _analyze_query_for_indexes(args["query"], result["plans"])  # best-effort
+        result["index_suggestions"] = _analyze_query_for_indexes(
+            args["query"], result["plans"]
+        )  # best-effort
     return result
 
 
-def _analyze_query_for_indexes(query: str, plans: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _analyze_query_for_indexes(
+    query: str, plans: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
     """Heuristic index suggestions based on execution nodes."""
     suggestions: List[Dict[str, Any]] = []
     for plan in plans or []:
@@ -683,10 +725,12 @@ def _analyze_query_for_indexes(query: str, plans: List[Dict[str, Any]]) -> List[
             # Suggest on Filter / IndexNode absence
             if node_type == "Filter" or node_type == "EnumerateCollection":
                 # Basic hint without deep AQL parsing
-                suggestions.append({
-                    "hint": "Consider adding a persistent/hash index for filtered fields",
-                    "nodeId": node.get("id"),
-                })
+                suggestions.append(
+                    {
+                        "hint": "Consider adding a persistent/hash index for filtered fields",
+                        "nodeId": node.get("id"),
+                    }
+                )
     # Deduplicate hints
     unique = []
     seen = set()
@@ -704,7 +748,9 @@ def _analyze_query_for_indexes(query: str, plans: List[Dict[str, Any]]) -> List[
     description="Validate that documents in a collection have valid references in specified fields.",
     model=ValidateReferencesArgs,
 )
-def handle_validate_references(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_validate_references(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Validate that reference fields contain valid document IDs."""
     """
     Operator model:
@@ -756,7 +802,9 @@ def handle_validate_references(db: StandardDatabase, args: Dict[str, Any]) -> Di
     description="Insert a document after validating its reference fields.",
     model=InsertWithValidationArgs,
 )
-def handle_insert_with_validation(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_insert_with_validation(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Insert a document after validating reference fields exist."""
     """
     Operator model:
@@ -786,7 +834,11 @@ def handle_insert_with_validation(db: StandardDatabase, args: Dict[str, Any]) ->
             return {"error": "Invalid references", "invalid_references": invalid}
     col = db.collection(args["collection"])
     result = col.insert(args["document"])
-    return {"_id": result.get("_id"), "_key": result.get("_key"), "_rev": result.get("_rev")}
+    return {
+        "_id": result.get("_id"),
+        "_key": result.get("_key"),
+        "_rev": result.get("_rev"),
+    }
 
 
 @handle_errors
@@ -829,16 +881,22 @@ def handle_bulk_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
                 pass
             batch_result = collection.insert_many(batch, return_new=False, sync=True)
             results["inserted_count"] += len(batch_result)
-            results["inserted_ids"].extend([r.get("_id") for r in batch_result if isinstance(r, dict)])
+            results["inserted_ids"].extend(
+                [r.get("_id") for r in batch_result if isinstance(r, dict)]
+            )
         except Exception as e:
             results["error_count"] += len(batch)
-            results["errors"].append({"batch_start": i, "batch_size": len(batch), "error": str(e)})
+            results["errors"].append(
+                {"batch_start": i, "batch_size": len(batch), "error": str(e)}
+            )
             if on_error == "stop":
                 break
             else:
                 continue
     results["success_rate"] = (
-        results["inserted_count"] / results["total_documents"] if results["total_documents"] else 0
+        results["inserted_count"] / results["total_documents"]
+        if results["total_documents"]
+        else 0
     )
     return results
 
@@ -870,7 +928,9 @@ def handle_create_schema(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
     collection = args["collection"]
     schema = args.get("schema_def", args.get("schema"))
     if schema is None:
-        raise ValueError("Missing schema definition (expected 'schema' or 'schema_def')")
+        raise ValueError(
+            "Missing schema definition (expected 'schema' or 'schema_def')"
+        )
     key = f"{collection}:{name}"
     # Ensure schema collection exists
     if not db.has_collection("mcp_schemas"):
@@ -900,7 +960,9 @@ def handle_create_schema(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
     description="Validate a document against a stored or inline JSON Schema.",
     model=ValidateDocumentArgs,
 )
-def handle_validate_document(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_validate_document(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Validate a document against a stored or inline JSON Schema.
 
     Operator model:
@@ -923,7 +985,9 @@ def handle_validate_document(db: StandardDatabase, args: Dict[str, Any]) -> Dict
             raise ValueError("Either 'schema' or 'schema_name' must be provided")
         key = f"{collection}:{schema_name}"
         if not db.has_collection("mcp_schemas"):
-            raise ValueError("No stored schemas found (collection 'mcp_schemas' missing)")
+            raise ValueError(
+                "No stored schemas found (collection 'mcp_schemas' missing)"
+            )
         col = db.collection("mcp_schemas")
         stored = col.get(key)
         if not stored:
@@ -955,7 +1019,9 @@ def handle_validate_document(db: StandardDatabase, args: Dict[str, Any]) -> Dict
     description="Build and execute a simple AQL query from filters, sort, and limit.",
     model=QueryBuilderArgs,
 )
-def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
+def handle_query_builder(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> List[Dict[str, Any]]:
     """Build and execute a simple AQL query from structured filters/sort/limit.
 
     Operator model:
@@ -976,7 +1042,11 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
     return_fields = args.get("return_fields")
 
     # Validate collection name to prevent injection
-    if not collection or not isinstance(collection, str) or not collection.replace('_', '').replace('-', '').isalnum():
+    if (
+        not collection
+        or not isinstance(collection, str)
+        or not collection.replace("_", "").replace("-", "").isalnum()
+    ):
         raise ValueError("Invalid collection name")
 
     # Supported operators whitelist
@@ -987,7 +1057,7 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
         if not field or not isinstance(field, str):
             raise ValueError("Invalid field name")
         # Allow alphanumeric, underscore, dot (for nested fields)
-        if not all(c.isalnum() or c in '._' for c in field):
+        if not all(c.isalnum() or c in "._" for c in field):
             raise ValueError(f"Invalid field name: {field}")
         return field
 
@@ -1033,13 +1103,13 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
     if sorts:
         sort_exprs = []
         for s in sorts:
-            sort_field = s.get('field')
-            direction = s.get('direction', 'ASC')
+            sort_field = s.get("field")
+            direction = s.get("direction", "ASC")
             if sort_field:
                 # Validate field name and direction
                 sort_field = _validate_field_name(sort_field)
-                if direction.upper() not in ('ASC', 'DESC'):
-                    direction = 'ASC'
+                if direction.upper() not in ("ASC", "DESC"):
+                    direction = "ASC"
                 sort_exprs.append(f"doc.{sort_field} {direction.upper()}")
         if sort_exprs:
             sort_section = "\n  SORT " + ", ".join(sort_exprs)
@@ -1100,7 +1170,11 @@ def handle_query_profile(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
         - Returns {plans, warnings, stats} for profiling/analysis.
         - No database mutations are performed.
     """
-    explain = db.aql.explain(args["query"], bind_vars=args.get("bind_vars") or {}, max_plans=int(args.get("max_plans", 1)))
+    explain = db.aql.explain(
+        args["query"],
+        bind_vars=args.get("bind_vars") or {},
+        max_plans=int(args.get("max_plans", 1)),
+    )
     return {
         "plans": explain.get("plans") or [],
         "warnings": explain.get("warnings") or [],
@@ -1134,11 +1208,13 @@ def handle_create_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
     # Prepare edge definitions for python-arango
     arango_edge_defs: List[Dict[str, Any]] = []
     for ed in edge_defs:
-        arango_edge_defs.append({
-            "edge_collection": ed["edge_collection"],
-            "from_vertex_collections": ed["from_collections"],
-            "to_vertex_collections": ed["to_collections"],
-        })
+        arango_edge_defs.append(
+            {
+                "edge_collection": ed["edge_collection"],
+                "from_vertex_collections": ed["from_collections"],
+                "to_vertex_collections": ed["to_collections"],
+            }
+        )
 
     # Create vertex and edge collections if requested
     if create_colls:
@@ -1159,7 +1235,13 @@ def handle_create_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
     info = {
         "name": name,
         "edge_definitions": edge_defs,
-        "vertex_collections": sorted({vc for ed in edge_defs for vc in (ed["from_collections"] + ed["to_collections"])})
+        "vertex_collections": sorted(
+            {
+                vc
+                for ed in edge_defs
+                for vc in (ed["from_collections"] + ed["to_collections"])
+            }
+        ),
     }
     return info
 
@@ -1182,9 +1264,17 @@ def handle_add_edge(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any
         - Mutates the edge collection.
     """
     col = db.collection(args["collection"])
-    payload = {"_from": args["from_id"], "_to": args["to_id"], **(args.get("attributes") or {})}
+    payload = {
+        "_from": args["from_id"],
+        "_to": args["to_id"],
+        **(args.get("attributes") or {}),
+    }
     result = col.insert(payload)
-    return {"_id": result.get("_id"), "_key": result.get("_key"), "_rev": result.get("_rev")}
+    return {
+        "_id": result.get("_id"),
+        "_key": result.get("_key"),
+        "_rev": result.get("_rev"),
+    }
 
 
 @register_tool(
@@ -1223,7 +1313,9 @@ def handle_traverse(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str
         bind = {"start": start, "graph": graph}
     else:
         if not edge_cols:
-            raise ValueError("edge_collections must be provided when graph is not specified")
+            raise ValueError(
+                "edge_collections must be provided when graph is not specified"
+            )
         # Traversal over explicit edge collections (comma-separated list)
         edge_expr = ", ".join(edge_cols)
         aql = f"""
@@ -1272,7 +1364,9 @@ def handle_shortest_path(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
         bind = {"start": start, "end": end, "graph": graph}
     else:
         if not edge_cols:
-            raise ValueError("edge_collections must be provided when graph is not specified")
+            raise ValueError(
+                "edge_collections must be provided when graph is not specified"
+            )
         edge_expr = ", ".join(edge_cols)
         aql = f"""
         FOR v, e IN {direction} SHORTEST_PATH @start TO @end {edge_expr}
@@ -1297,11 +1391,13 @@ def handle_shortest_path(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
     description="List available graphs in the database.",
     model=ListGraphsArgs,
 )
-def handle_list_graphs(db: StandardDatabase, args: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
+def handle_list_graphs(
+    db: StandardDatabase, args: Dict[str, Any] | None = None
+) -> List[Dict[str, Any]]:
     """List available graphs in the database.
 
     Returns a simplified list of graph metadata with at least the name.
-    
+
     Operator model:
       Preconditions:
         - Database connection available.
@@ -1317,10 +1413,12 @@ def handle_list_graphs(db: StandardDatabase, args: Dict[str, Any] | None = None)
     for g in graphs or []:
         # Support both dict and object-like items
         if isinstance(g, dict):
-            result.append({
-                "name": g.get("name"),
-                "_raw": g,
-            })
+            result.append(
+                {
+                    "name": g.get("name"),
+                    "_raw": g,
+                }
+            )
         else:
             name = getattr(g, "name", None)
             result.append({"name": name})
@@ -1333,7 +1431,9 @@ def handle_list_graphs(db: StandardDatabase, args: Dict[str, Any] | None = None)
     description="Add a vertex collection to a named graph.",
     model=AddVertexCollectionArgs,
 )
-def handle_add_vertex_collection(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_add_vertex_collection(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Add a vertex collection to a named graph."""
     """
     Operator model:
@@ -1356,7 +1456,9 @@ def handle_add_vertex_collection(db: StandardDatabase, args: Dict[str, Any]) -> 
     description="Create an edge definition in a named graph.",
     model=AddEdgeDefinitionArgs,
 )
-def handle_add_edge_definition(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_add_edge_definition(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Create an edge definition in a named graph."""
     """
     Operator model:
@@ -1422,13 +1524,19 @@ def handle_bulk_update(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
             normalized = []
             for item in batch:
                 key = item.get("key") or item.get("_key")
-                update = item.get("update") or {k: v for k, v in item.items() if k not in ("key", "_key")}
+                update = item.get("update") or {
+                    k: v for k, v in item.items() if k not in ("key", "_key")
+                }
                 normalized.append({"_key": key, **update})
-            result = collection.update_many(normalized, keep_none=True, merge=True, return_new=False, sync=True)
+            result = collection.update_many(
+                normalized, keep_none=True, merge=True, return_new=False, sync=True
+            )
             results["updated_count"] += len(result)
         except Exception as e:
             results["error_count"] += len(batch)
-            results["errors"].append({"batch_start": i, "batch_size": len(batch), "error": str(e)})
+            results["errors"].append(
+                {"batch_start": i, "batch_size": len(batch), "error": str(e)}
+            )
             if on_error == "stop":
                 break
             else:
@@ -1499,7 +1607,9 @@ def handle_restore_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
     conflict_resolution = args.get("conflict_resolution", "error")
     validate_integrity = args.get("validate_integrity", True)
 
-    return restore_graph_from_dir(db, input_dir, graph_name, conflict_resolution, validate_integrity)
+    return restore_graph_from_dir(
+        db, input_dir, graph_name, conflict_resolution, validate_integrity
+    )
 
 
 @handle_errors
@@ -1508,7 +1618,9 @@ def handle_restore_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
     description="Backup graph definitions from _graphs system collection.",
     model=BackupNamedGraphsArgs,
 )
-def handle_backup_named_graphs(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_backup_named_graphs(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Backup graph definitions from _graphs system collection.
 
     Args:
@@ -1538,7 +1650,9 @@ def handle_backup_named_graphs(db: StandardDatabase, args: Dict[str, Any]) -> Di
     description="Verify graph consistency, orphaned edges, and constraint violations.",
     model=ValidateGraphIntegrityArgs,
 )
-def handle_validate_graph_integrity(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_validate_graph_integrity(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Verify graph consistency, orphaned edges, and constraint violations.
 
     Args:
@@ -1560,7 +1674,9 @@ def handle_validate_graph_integrity(db: StandardDatabase, args: Dict[str, Any]) 
     check_constraints = args.get("check_constraints", True)
     return_details = args.get("return_details", False)
 
-    return validate_graph_integrity(db, graph_name, check_orphaned_edges, check_constraints, return_details)
+    return validate_graph_integrity(
+        db, graph_name, check_orphaned_edges, check_constraints, return_details
+    )
 
 
 @register_tool(
@@ -1569,7 +1685,9 @@ def handle_validate_graph_integrity(db: StandardDatabase, args: Dict[str, Any]) 
     model=GraphStatisticsArgs,
 )
 @handle_errors
-def handle_graph_statistics(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+def handle_graph_statistics(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
     """Generate comprehensive graph analytics with improved representativeness.
 
     Args:
@@ -1600,7 +1718,7 @@ def handle_graph_statistics(db: StandardDatabase, args: Dict[str, Any]) -> Dict[
         include_connectivity,
         sample_size,
         aggregate_collections,
-        per_collection_stats
+        per_collection_stats,
     )
 
 
@@ -1610,7 +1728,9 @@ def handle_graph_statistics(db: StandardDatabase, args: Dict[str, Any]) -> Dict[
     model=ArangoDatabaseStatusArgs,
 )
 @handle_errors
-def handle_arango_database_status(db: StandardDatabase, args: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def handle_arango_database_status(
+    db: StandardDatabase, args: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """Check database connection status and return diagnostic information.
 
     This tool provides visibility into the database connection state, which is
@@ -1630,6 +1750,7 @@ def handle_arango_database_status(db: StandardDatabase, args: Optional[Dict[str,
     # Check if database connection is available
     if db is None:
         import os
+
         return {
             "connected": False,
             "message": "Database connection is not available",
@@ -1637,23 +1758,28 @@ def handle_arango_database_status(db: StandardDatabase, args: Optional[Dict[str,
                 "url": os.getenv("ARANGO_URL", "http://localhost:8529"),
                 "database": os.getenv("ARANGO_DB", "_system"),
             },
-            "suggestion": "Please ensure ArangoDB is running and accessible. Check ARANGO_URL and ARANGO_DB environment variables."
+            "suggestion": "Please ensure ArangoDB is running and accessible. Check ARANGO_URL and ARANGO_DB environment variables.",
         }
 
     # Database is connected - get server info
     try:
         version_info = db.version()
-        server_version = version_info if isinstance(version_info, str) else version_info.get("version", "unknown")
+        server_version = (
+            version_info
+            if isinstance(version_info, str)
+            else version_info.get("version", "unknown")
+        )
 
         return {
             "connected": True,
             "database": db.name,
             "server_version": server_version,
-            "message": "Database connection is active"
+            "message": "Database connection is active",
         }
     except Exception as e:
         # Connection exists but query failed
         import os
+
         return {
             "connected": False,
             "message": f"Database connection exists but query failed: {str(e)}",
@@ -1661,7 +1787,7 @@ def handle_arango_database_status(db: StandardDatabase, args: Optional[Dict[str,
                 "url": os.getenv("ARANGO_URL", "http://localhost:8529"),
                 "database": os.getenv("ARANGO_DB", "_system"),
             },
-            "suggestion": "Database connection may be stale or server may be unresponsive."
+            "suggestion": "Database connection may be stale or server may be unresponsive.",
         }
 
 

@@ -1,4 +1,4 @@
-python-arango>=7.6,<8
+python-arango>=8.2.2,<9
 python-dotenv>=1.0,<2
 mcp>=1.18.0
 pydantic>=2,<3

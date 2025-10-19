@@ -439,7 +439,7 @@ async def run_stdio() -> None:
             write_stream,
             InitializationOptions(
                 server_name="mcp-arangodb-async",
-                server_version="0.2.5",
+                server_version="0.2.6",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},
