@@ -93,6 +93,42 @@ from .graph_backup import (
     validate_graph_integrity,
     calculate_graph_statistics,
 )
+from .tool_registry import register_tool
+from .tools import (
+    ARANGO_QUERY,
+    ARANGO_LIST_COLLECTIONS,
+    ARANGO_INSERT,
+    ARANGO_UPDATE,
+    ARANGO_REMOVE,
+    ARANGO_CREATE_COLLECTION,
+    ARANGO_BACKUP,
+    ARANGO_LIST_INDEXES,
+    ARANGO_CREATE_INDEX,
+    ARANGO_DELETE_INDEX,
+    ARANGO_EXPLAIN_QUERY,
+    ARANGO_VALIDATE_REFERENCES,
+    ARANGO_INSERT_WITH_VALIDATION,
+    ARANGO_BULK_INSERT,
+    ARANGO_BULK_UPDATE,
+    ARANGO_CREATE_GRAPH,
+    ARANGO_ADD_EDGE,
+    ARANGO_TRAVERSE,
+    ARANGO_SHORTEST_PATH,
+    ARANGO_LIST_GRAPHS,
+    ARANGO_ADD_VERTEX_COLLECTION,
+    ARANGO_ADD_EDGE_DEFINITION,
+    ARANGO_GRAPH_TRAVERSAL,
+    ARANGO_ADD_VERTEX,
+    ARANGO_CREATE_SCHEMA,
+    ARANGO_VALIDATE_DOCUMENT,
+    ARANGO_QUERY_BUILDER,
+    ARANGO_QUERY_PROFILE,
+    ARANGO_BACKUP_GRAPH,
+    ARANGO_RESTORE_GRAPH,
+    ARANGO_BACKUP_NAMED_GRAPHS,
+    ARANGO_VALIDATE_GRAPH_INTEGRITY,
+    ARANGO_GRAPH_STATISTICS,
+)
 
 # Configure logger for handlers
 logger = logging.getLogger(__name__)
@@ -157,6 +193,13 @@ def safe_cursor(cursor):
             except Exception:
                 pass  # Ignore cleanup errors
 from .models import (
+    QueryArgs,
+    ListCollectionsArgs,
+    InsertArgs,
+    UpdateArgs,
+    RemoveArgs,
+    CreateCollectionArgs,
+    BackupArgs,
     CreateIndexArgs,
     DeleteIndexArgs,
     ListIndexesArgs,
@@ -169,10 +212,27 @@ from .models import (
     AddEdgeArgs,
     TraverseArgs,
     ShortestPathArgs,
+    ListGraphsArgs,
+    AddVertexCollectionArgs,
+    AddEdgeDefinitionArgs,
+    CreateSchemaArgs,
+    ValidateDocumentArgs,
+    QueryBuilderArgs,
+    QueryProfileArgs,
+    BackupGraphArgs,
+    RestoreGraphArgs,
+    BackupNamedGraphsArgs,
+    ValidateGraphIntegrityArgs,
+    GraphStatisticsArgs,
 )
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_QUERY,
+    description="Execute an AQL query with optional bind vars and return rows.",
+    model=QueryArgs,
+)
 def handle_arango_query(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Execute an AQL query with optional bind vars and return the result list.
 
@@ -192,6 +252,11 @@ def handle_arango_query(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_LIST_COLLECTIONS,
+    description="List non-system collection names.",
+    model=ListCollectionsArgs,
+)
 def handle_list_collections(db: StandardDatabase, args: Optional[Dict[str, Any]] = None) -> List[str]:
     """Return non-system collection names (document + edge).
 
@@ -223,6 +288,11 @@ def handle_list_collections(db: StandardDatabase, args: Optional[Dict[str, Any]]
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_INSERT,
+    description="Insert a document into a collection.",
+    model=InsertArgs,
+)
 def handle_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Insert a document into a collection.
 
@@ -255,6 +325,11 @@ def handle_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_UPDATE,
+    description="Update a document by key in a collection.",
+    model=UpdateArgs,
+)
 def handle_update(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Update a document by key in a collection.
 
@@ -288,6 +363,11 @@ def handle_update(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_REMOVE,
+    description="Remove a document by key in a collection.",
+    model=RemoveArgs,
+)
 def handle_remove(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Remove a document by key from a collection.
 
@@ -319,6 +399,11 @@ def handle_remove(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_CREATE_COLLECTION,
+    description="Create a collection (document or edge).",
+    model=CreateCollectionArgs,
+)
 def handle_create_collection(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Create a collection (document or edge) or get existing one.
 
@@ -364,6 +449,11 @@ def handle_create_collection(db: StandardDatabase, args: Dict[str, Any]) -> Dict
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_BACKUP,
+    description="Backup collections to JSON files.",
+    model=BackupArgs,
+)
 def handle_backup(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Backup collections to JSON files.
 
@@ -396,6 +486,11 @@ def handle_backup(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_LIST_INDEXES,
+    description="List indexes for a collection.",
+    model=ListIndexesArgs,
+)
 def handle_list_indexes(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
     """List indexes for a given collection (simplified fields).
 
@@ -422,6 +517,11 @@ def handle_list_indexes(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict
     return simplified
 
 
+@register_tool(
+    name=ARANGO_CREATE_INDEX,
+    description="Create an index on a collection (persistent, hash, skiplist, ttl, fulltext, geo).",
+    model=CreateIndexArgs,
+)
 @handle_errors
 def handle_create_index(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Create an index for a collection, supporting all common index types.
@@ -503,6 +603,11 @@ def handle_create_index(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_DELETE_INDEX,
+    description="Delete an index by id or name from a collection.",
+    model=DeleteIndexArgs,
+)
 def handle_delete_index(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Delete an index, accepting index id (collection/12345) or index name."""
     """
@@ -538,6 +643,11 @@ def handle_delete_index(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_EXPLAIN_QUERY,
+    description="Explain an AQL query and return execution plans and optional index suggestions.",
+    model=ExplainQueryArgs,
+)
 def handle_explain_query(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Analyze query execution plan and optionally include index suggestions."""
     """
@@ -587,6 +697,11 @@ def _analyze_query_for_indexes(query: str, plans: List[Dict[str, Any]]) -> List[
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_VALIDATE_REFERENCES,
+    description="Validate that documents in a collection have valid references in specified fields.",
+    model=ValidateReferencesArgs,
+)
 def handle_validate_references(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Validate that reference fields contain valid document IDs."""
     """
@@ -634,6 +749,11 @@ def handle_validate_references(db: StandardDatabase, args: Dict[str, Any]) -> Di
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_INSERT_WITH_VALIDATION,
+    description="Insert a document after validating its reference fields.",
+    model=InsertWithValidationArgs,
+)
 def handle_insert_with_validation(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Insert a document after validating reference fields exist."""
     """
@@ -668,6 +788,11 @@ def handle_insert_with_validation(db: StandardDatabase, args: Dict[str, Any]) ->
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_BULK_INSERT,
+    description="Bulk insert documents with batching and basic error handling.",
+    model=BulkInsertArgs,
+)
 def handle_bulk_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Insert multiple documents efficiently with optional validation and batching."""
     """
@@ -718,6 +843,11 @@ def handle_bulk_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
 
 # Schema management handlers
 @handle_errors
+@register_tool(
+    name=ARANGO_CREATE_SCHEMA,
+    description="Create or update a named JSON Schema for a collection.",
+    model=CreateSchemaArgs,
+)
 def handle_create_schema(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Create or update a named JSON Schema for a collection.
 
@@ -763,6 +893,11 @@ def handle_create_schema(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_VALIDATE_DOCUMENT,
+    description="Validate a document against a stored or inline JSON Schema.",
+    model=ValidateDocumentArgs,
+)
 def handle_validate_document(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Validate a document against a stored or inline JSON Schema.
 
@@ -813,6 +948,11 @@ def handle_validate_document(db: StandardDatabase, args: Dict[str, Any]) -> Dict
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_QUERY_BUILDER,
+    description="Build and execute a simple AQL query from filters, sort, and limit.",
+    model=QueryBuilderArgs,
+)
 def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Build and execute a simple AQL query from structured filters/sort/limit.
 
@@ -941,6 +1081,11 @@ def handle_query_builder(db: StandardDatabase, args: Dict[str, Any]) -> List[Dic
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_QUERY_PROFILE,
+    description="Explain a query and return plans/stats for profiling.",
+    model=QueryProfileArgs,
+)
 def handle_query_profile(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Return explain plans and stats for a query (profiling helper).
 
@@ -962,6 +1107,11 @@ def handle_query_profile(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
 
 
 # Graph handlers (Phase 2)
+@register_tool(
+    name=ARANGO_CREATE_GRAPH,
+    description="Create a named graph with edge definitions (optionally creating collections).",
+    model=CreateGraphArgs,
+)
 @handle_errors
 def handle_create_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Create a named graph with edge definitions, optionally creating collections."""
@@ -1013,6 +1163,11 @@ def handle_create_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_ADD_EDGE,
+    description="Add an edge document between two vertices with optional attributes.",
+    model=AddEdgeArgs,
+)
 def handle_add_edge(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Insert an edge document with _from and _to and optional attributes."""
     """
@@ -1030,6 +1185,11 @@ def handle_add_edge(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any
     return {"_id": result.get("_id"), "_key": result.get("_key"), "_rev": result.get("_rev")}
 
 
+@register_tool(
+    name=ARANGO_TRAVERSE,
+    description="Traverse graph from a start vertex with depth bounds (by graph or edge collections).",
+    model=TraverseArgs,
+)
 @handle_errors
 def handle_traverse(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Perform a bounded traversal via AQL using either a named graph or edge collections."""
@@ -1078,6 +1238,11 @@ def handle_traverse(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str
         return list(cursor)
 
 
+@register_tool(
+    name=ARANGO_SHORTEST_PATH,
+    description="Compute the shortest path between two vertices (by graph or edge collections).",
+    model=ShortestPathArgs,
+)
 @handle_errors
 def handle_shortest_path(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Compute shortest path between two vertices using AQL."""
@@ -1125,6 +1290,11 @@ def handle_shortest_path(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
 
 # Additional graph management handlers
 @handle_errors
+@register_tool(
+    name=ARANGO_LIST_GRAPHS,
+    description="List available graphs in the database.",
+    model=ListGraphsArgs,
+)
 def handle_list_graphs(db: StandardDatabase, args: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
     """List available graphs in the database.
 
@@ -1156,6 +1326,11 @@ def handle_list_graphs(db: StandardDatabase, args: Dict[str, Any] | None = None)
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_ADD_VERTEX_COLLECTION,
+    description="Add a vertex collection to a named graph.",
+    model=AddVertexCollectionArgs,
+)
 def handle_add_vertex_collection(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Add a vertex collection to a named graph."""
     """
@@ -1174,6 +1349,11 @@ def handle_add_vertex_collection(db: StandardDatabase, args: Dict[str, Any]) -> 
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_ADD_EDGE_DEFINITION,
+    description="Create an edge definition in a named graph.",
+    model=AddEdgeDefinitionArgs,
+)
 def handle_add_edge_definition(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Create an edge definition in a named graph."""
     """
@@ -1205,6 +1385,11 @@ def handle_add_edge_definition(db: StandardDatabase, args: Dict[str, Any]) -> Di
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_BULK_UPDATE,
+    description="Bulk update documents by key with batching.",
+    model=BulkUpdateArgs,
+)
 def handle_bulk_update(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Update multiple documents by key with batching."""
     """
@@ -1251,6 +1436,11 @@ def handle_bulk_update(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
 
 # Graph Management Handlers (Phase 3 - New Graph Tools)
 @handle_errors
+@register_tool(
+    name=ARANGO_BACKUP_GRAPH,
+    description="Export complete graph structure including vertices, edges, and metadata.",
+    model=BackupGraphArgs,
+)
 def handle_backup_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Export complete graph structure including vertices, edges, and metadata.
 
@@ -1278,6 +1468,11 @@ def handle_backup_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_RESTORE_GRAPH,
+    description="Import graph data with referential integrity validation and conflict resolution.",
+    model=RestoreGraphArgs,
+)
 def handle_restore_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Import graph data with referential integrity validation and conflict resolution.
 
@@ -1306,6 +1501,11 @@ def handle_restore_graph(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_BACKUP_NAMED_GRAPHS,
+    description="Backup graph definitions from _graphs system collection.",
+    model=BackupNamedGraphsArgs,
+)
 def handle_backup_named_graphs(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Backup graph definitions from _graphs system collection.
 
@@ -1331,6 +1531,11 @@ def handle_backup_named_graphs(db: StandardDatabase, args: Dict[str, Any]) -> Di
 
 
 @handle_errors
+@register_tool(
+    name=ARANGO_VALIDATE_GRAPH_INTEGRITY,
+    description="Verify graph consistency, orphaned edges, and constraint violations.",
+    model=ValidateGraphIntegrityArgs,
+)
 def handle_validate_graph_integrity(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Verify graph consistency, orphaned edges, and constraint violations.
 
@@ -1356,6 +1561,11 @@ def handle_validate_graph_integrity(db: StandardDatabase, args: Dict[str, Any]) 
     return validate_graph_integrity(db, graph_name, check_orphaned_edges, check_constraints, return_details)
 
 
+@register_tool(
+    name=ARANGO_GRAPH_STATISTICS,
+    description="Generate comprehensive graph analytics (vertex/edge counts, degree distribution, connectivity metrics).",
+    model=GraphStatisticsArgs,
+)
 @handle_errors
 def handle_graph_statistics(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Generate comprehensive graph analytics with improved representativeness.
@@ -1390,3 +1600,23 @@ def handle_graph_statistics(db: StandardDatabase, args: Dict[str, Any]) -> Dict[
         aggregate_collections,
         per_collection_stats
     )
+
+
+# Register aliases for backward compatibility
+from .tool_registry import ToolRegistration, TOOL_REGISTRY
+
+# Alias: ARANGO_GRAPH_TRAVERSAL -> handle_traverse
+TOOL_REGISTRY[ARANGO_GRAPH_TRAVERSAL] = ToolRegistration(
+    name=ARANGO_GRAPH_TRAVERSAL,
+    description="Alias for arango_traverse (graph traversal by graph or edge collections).",
+    model=TraverseArgs,
+    handler=handle_traverse,
+)
+
+# Alias: ARANGO_ADD_VERTEX -> handle_insert
+TOOL_REGISTRY[ARANGO_ADD_VERTEX] = ToolRegistration(
+    name=ARANGO_ADD_VERTEX,
+    description="Alias for arango_insert (insert a vertex document into a collection).",
+    model=InsertArgs,
+    handler=handle_insert,
+)
