@@ -193,7 +193,9 @@ async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
             )
             break
         except Exception:
-            logger.warning("ArangoDB connection attempt %d failed", attempt, exc_info=True)
+            logger.warning(
+                "ArangoDB connection attempt %d failed", attempt, exc_info=True
+            )
             if attempt < retries:
                 try:
                     await asyncio.sleep(delay)
@@ -252,17 +254,19 @@ async def handle_list_tools() -> List[types.Tool]:
 
 def _json_content(data: Any) -> List[types.Content]:
     """Convert data to JSON text content for MCP response.
-    
+
     Args:
         data: Any serializable data structure
-        
+
     Returns:
         List containing a single TextContent with JSON representation
     """
     return [types.TextContent(type="text", text=json.dumps(data, ensure_ascii=False))]
 
 
-def _invoke_handler(handler: Callable, db: StandardDatabase, args: Dict[str, Any]) -> Any:
+def _invoke_handler(
+    handler: Callable, db: StandardDatabase, args: Dict[str, Any]
+) -> Any:
     """Invoke handler function with appropriate signature based on its parameter requirements.
 
     This function provides dual signature support to handle two different calling conventions:
@@ -335,11 +339,13 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
         parsed = tool_reg.model(**(arguments or {}))
         validated_args: Dict[str, Any] = parsed.model_dump(exclude_none=True)
     except ValidationError as ve:
-        return _json_content({
-            "error": "ValidationError",
-            "tool": name,
-            "details": json.loads(ve.json()),
-        })
+        return _json_content(
+            {
+                "error": "ValidationError",
+                "tool": name,
+                "details": json.loads(ve.json()),
+            }
+        )
 
     # If DB is unavailable, attempt a lazy one-shot connect (helps when startup race occurred)
     if db is None:
@@ -351,12 +357,16 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
                 ctx.lifespan_context["db"] = db_conn
                 ctx.lifespan_context["client"] = client
             db = db_conn
-            logger.info("Lazy DB connect succeeded during tool call: db=%s", cfg.database)
+            logger.info(
+                "Lazy DB connect succeeded during tool call: db=%s", cfg.database
+            )
         except Exception as e:
-            logger.warning("Lazy DB connect failed; returning Database unavailable", exc_info=True)
+            logger.warning(
+                "Lazy DB connect failed; returning Database unavailable", exc_info=True
+            )
 
             # Send MCP log notification to client (if session available)
-            if ctx and hasattr(ctx, 'session') and ctx.session:
+            if ctx and hasattr(ctx, "session") and ctx.session:
                 try:
                     await ctx.session.send_log_message(
                         level="error",
@@ -369,18 +379,20 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
                                 "url": os.getenv("ARANGO_URL", "http://localhost:8529"),
                                 "database": os.getenv("ARANGO_DB", "_system"),
                             },
-                            "exception": str(e)
+                            "exception": str(e),
                         },
-                        logger="mcp_arangodb_async.database"
+                        logger="mcp_arangodb_async.database",
                     )
                 except Exception as log_err:
                     logger.debug(f"Failed to send MCP log notification: {log_err}")
 
-            return _json_content({
-                "error": "Database unavailable",
-                "tool": name,
-                "hint": "Ensure ArangoDB is reachable or check ARANGO_* environment variables.",
-            })
+            return _json_content(
+                {
+                    "error": "Database unavailable",
+                    "tool": name,
+                    "hint": "Ensure ArangoDB is reachable or check ARANGO_* environment variables.",
+                }
+            )
 
     # Dispatch to handler via registry (O(1) lookup)
     try:
@@ -388,29 +400,38 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
         return _json_content(result)
     except Exception as e:
         logger.exception("Error executing tool '%s'", name)
-        return _json_content({
-            "error": str(e),
-            "tool": name,
-        })
+        return _json_content(
+            {
+                "error": str(e),
+                "tool": name,
+            }
+        )
 
 
 # Test compatibility shim: expose handlers dict expected by integration tests
 # (These reference the actual async functions defined above.)
-setattr(server, "_handlers", {
-    "list_tools": handle_list_tools,
-    "call_tool": call_tool,
-})
+setattr(
+    server,
+    "_handlers",
+    {
+        "list_tools": handle_list_tools,
+        "call_tool": call_tool,
+    },
+)
 
 # Compatibility shim: make Server.request_context safe and patchable everywhere.
 # Always provide a getter/setter that returns a simple object by default, avoiding
 # ContextVar LookupError outside of real MCP requests. Tests can patch this.
 ServerClass = type(server)
 
+
 def _safe_get_request_context(self: Any) -> Any:
     return getattr(self, "_safe_request_context", SimpleNamespace(lifespan_context={}))
 
+
 def _safe_set_request_context(self: Any, value: Any) -> None:
     setattr(self, "_safe_request_context", value)
+
 
 def _safe_del_request_context(self: Any) -> None:
     if hasattr(self, "_safe_request_context"):
@@ -419,10 +440,13 @@ def _safe_del_request_context(self: Any) -> None:
         except Exception:
             pass
 
+
 setattr(
     ServerClass,
     "request_context",
-    property(_safe_get_request_context, _safe_set_request_context, _safe_del_request_context),
+    property(
+        _safe_get_request_context, _safe_set_request_context, _safe_del_request_context
+    ),
 )
 
 
@@ -439,7 +463,7 @@ async def run_stdio() -> None:
             write_stream,
             InitializationOptions(
                 server_name="mcp-arangodb-async",
-                server_version="0.2.6",
+                server_version="0.2.7",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},
