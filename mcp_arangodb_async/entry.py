@@ -139,6 +139,253 @@ from .models import (
     ValidateGraphIntegrityArgs,
     GraphStatisticsArgs,
 )
+from .tool_registry import TOOL_REGISTRY, ToolRegistration
+
+
+# ============================================================================
+# Tool Registry Population
+# ============================================================================
+# Manually populate the tool registry with all tool definitions.
+# This serves as the single source of truth for tool metadata, replacing
+# the previous hybrid approach (model map + if-elif chain + manual tool list).
+#
+# Phase 1: Manual registration (current implementation)
+# Phase 2: Will migrate to @register_tool() decorators on handlers
+# ============================================================================
+
+TOOL_REGISTRY[ARANGO_QUERY] = ToolRegistration(
+    name=ARANGO_QUERY,
+    description="Execute an AQL query with optional bind vars and return rows.",
+    model=QueryArgs,
+    handler=handle_arango_query,
+)
+
+TOOL_REGISTRY[ARANGO_LIST_COLLECTIONS] = ToolRegistration(
+    name=ARANGO_LIST_COLLECTIONS,
+    description="List non-system collection names.",
+    model=ListCollectionsArgs,
+    handler=handle_list_collections,
+)
+
+TOOL_REGISTRY[ARANGO_INSERT] = ToolRegistration(
+    name=ARANGO_INSERT,
+    description="Insert a document into a collection.",
+    model=InsertArgs,
+    handler=handle_insert,
+)
+
+TOOL_REGISTRY[ARANGO_UPDATE] = ToolRegistration(
+    name=ARANGO_UPDATE,
+    description="Update a document by key in a collection.",
+    model=UpdateArgs,
+    handler=handle_update,
+)
+
+TOOL_REGISTRY[ARANGO_REMOVE] = ToolRegistration(
+    name=ARANGO_REMOVE,
+    description="Remove a document by key in a collection.",
+    model=RemoveArgs,
+    handler=handle_remove,
+)
+
+TOOL_REGISTRY[ARANGO_CREATE_COLLECTION] = ToolRegistration(
+    name=ARANGO_CREATE_COLLECTION,
+    description="Create a collection (document or edge).",
+    model=CreateCollectionArgs,
+    handler=handle_create_collection,
+)
+
+TOOL_REGISTRY[ARANGO_BACKUP] = ToolRegistration(
+    name=ARANGO_BACKUP,
+    description="Backup collections to JSON files.",
+    model=BackupArgs,
+    handler=handle_backup,
+)
+
+TOOL_REGISTRY[ARANGO_LIST_INDEXES] = ToolRegistration(
+    name=ARANGO_LIST_INDEXES,
+    description="List indexes for a collection.",
+    model=ListIndexesArgs,
+    handler=handle_list_indexes,
+)
+
+TOOL_REGISTRY[ARANGO_CREATE_INDEX] = ToolRegistration(
+    name=ARANGO_CREATE_INDEX,
+    description="Create an index on a collection (persistent, hash, skiplist, ttl, fulltext, geo).",
+    model=CreateIndexArgs,
+    handler=handle_create_index,
+)
+
+TOOL_REGISTRY[ARANGO_DELETE_INDEX] = ToolRegistration(
+    name=ARANGO_DELETE_INDEX,
+    description="Delete an index by id or name from a collection.",
+    model=DeleteIndexArgs,
+    handler=handle_delete_index,
+)
+
+TOOL_REGISTRY[ARANGO_EXPLAIN_QUERY] = ToolRegistration(
+    name=ARANGO_EXPLAIN_QUERY,
+    description="Explain an AQL query and return execution plans and optional index suggestions.",
+    model=ExplainQueryArgs,
+    handler=handle_explain_query,
+)
+
+TOOL_REGISTRY[ARANGO_VALIDATE_REFERENCES] = ToolRegistration(
+    name=ARANGO_VALIDATE_REFERENCES,
+    description="Validate that documents in a collection have valid references in specified fields.",
+    model=ValidateReferencesArgs,
+    handler=handle_validate_references,
+)
+
+TOOL_REGISTRY[ARANGO_INSERT_WITH_VALIDATION] = ToolRegistration(
+    name=ARANGO_INSERT_WITH_VALIDATION,
+    description="Insert a document after validating its reference fields.",
+    model=InsertWithValidationArgs,
+    handler=handle_insert_with_validation,
+)
+
+TOOL_REGISTRY[ARANGO_BULK_INSERT] = ToolRegistration(
+    name=ARANGO_BULK_INSERT,
+    description="Bulk insert documents with batching and basic error handling.",
+    model=BulkInsertArgs,
+    handler=handle_bulk_insert,
+)
+
+TOOL_REGISTRY[ARANGO_BULK_UPDATE] = ToolRegistration(
+    name=ARANGO_BULK_UPDATE,
+    description="Bulk update documents by key with batching.",
+    model=BulkUpdateArgs,
+    handler=handle_bulk_update,
+)
+
+TOOL_REGISTRY[ARANGO_CREATE_GRAPH] = ToolRegistration(
+    name=ARANGO_CREATE_GRAPH,
+    description="Create a named graph with edge definitions (optionally creating collections).",
+    model=CreateGraphArgs,
+    handler=handle_create_graph,
+)
+
+TOOL_REGISTRY[ARANGO_ADD_EDGE] = ToolRegistration(
+    name=ARANGO_ADD_EDGE,
+    description="Add an edge document between two vertices with optional attributes.",
+    model=AddEdgeArgs,
+    handler=handle_add_edge,
+)
+
+TOOL_REGISTRY[ARANGO_TRAVERSE] = ToolRegistration(
+    name=ARANGO_TRAVERSE,
+    description="Traverse graph from a start vertex with depth bounds (by graph or edge collections).",
+    model=TraverseArgs,
+    handler=handle_traverse,
+)
+
+TOOL_REGISTRY[ARANGO_SHORTEST_PATH] = ToolRegistration(
+    name=ARANGO_SHORTEST_PATH,
+    description="Compute the shortest path between two vertices (by graph or edge collections).",
+    model=ShortestPathArgs,
+    handler=handle_shortest_path,
+)
+
+TOOL_REGISTRY[ARANGO_LIST_GRAPHS] = ToolRegistration(
+    name=ARANGO_LIST_GRAPHS,
+    description="List available graphs in the database.",
+    model=ListGraphsArgs,
+    handler=handle_list_graphs,
+)
+
+TOOL_REGISTRY[ARANGO_ADD_VERTEX_COLLECTION] = ToolRegistration(
+    name=ARANGO_ADD_VERTEX_COLLECTION,
+    description="Add a vertex collection to a named graph.",
+    model=AddVertexCollectionArgs,
+    handler=handle_add_vertex_collection,
+)
+
+TOOL_REGISTRY[ARANGO_ADD_EDGE_DEFINITION] = ToolRegistration(
+    name=ARANGO_ADD_EDGE_DEFINITION,
+    description="Create an edge definition in a named graph.",
+    model=AddEdgeDefinitionArgs,
+    handler=handle_add_edge_definition,
+)
+
+# Alias: ARANGO_GRAPH_TRAVERSAL -> handle_traverse
+TOOL_REGISTRY[ARANGO_GRAPH_TRAVERSAL] = ToolRegistration(
+    name=ARANGO_GRAPH_TRAVERSAL,
+    description="Alias for arango_traverse (graph traversal by graph or edge collections).",
+    model=TraverseArgs,
+    handler=handle_traverse,
+)
+
+# Alias: ARANGO_ADD_VERTEX -> handle_insert
+TOOL_REGISTRY[ARANGO_ADD_VERTEX] = ToolRegistration(
+    name=ARANGO_ADD_VERTEX,
+    description="Alias for arango_insert (insert a vertex document into a collection).",
+    model=InsertArgs,
+    handler=handle_insert,
+)
+
+TOOL_REGISTRY[ARANGO_CREATE_SCHEMA] = ToolRegistration(
+    name=ARANGO_CREATE_SCHEMA,
+    description="Create or update a named JSON Schema for a collection.",
+    model=CreateSchemaArgs,
+    handler=handle_create_schema,
+)
+
+TOOL_REGISTRY[ARANGO_VALIDATE_DOCUMENT] = ToolRegistration(
+    name=ARANGO_VALIDATE_DOCUMENT,
+    description="Validate a document against a stored or inline JSON Schema.",
+    model=ValidateDocumentArgs,
+    handler=handle_validate_document,
+)
+
+TOOL_REGISTRY[ARANGO_QUERY_BUILDER] = ToolRegistration(
+    name=ARANGO_QUERY_BUILDER,
+    description="Build and execute a simple AQL query from filters, sort, and limit.",
+    model=QueryBuilderArgs,
+    handler=handle_query_builder,
+)
+
+TOOL_REGISTRY[ARANGO_QUERY_PROFILE] = ToolRegistration(
+    name=ARANGO_QUERY_PROFILE,
+    description="Explain a query and return plans/stats for profiling.",
+    model=QueryProfileArgs,
+    handler=handle_query_profile,
+)
+
+# Graph Management Tools (Phase 5)
+TOOL_REGISTRY[ARANGO_BACKUP_GRAPH] = ToolRegistration(
+    name=ARANGO_BACKUP_GRAPH,
+    description="Export complete graph structure including vertices, edges, and metadata.",
+    model=BackupGraphArgs,
+    handler=handle_backup_graph,
+)
+
+TOOL_REGISTRY[ARANGO_RESTORE_GRAPH] = ToolRegistration(
+    name=ARANGO_RESTORE_GRAPH,
+    description="Import graph data with referential integrity validation and conflict resolution.",
+    model=RestoreGraphArgs,
+    handler=handle_restore_graph,
+)
+
+TOOL_REGISTRY[ARANGO_BACKUP_NAMED_GRAPHS] = ToolRegistration(
+    name=ARANGO_BACKUP_NAMED_GRAPHS,
+    description="Backup graph definitions from _graphs system collection.",
+    model=BackupNamedGraphsArgs,
+    handler=handle_backup_named_graphs,
+)
+
+TOOL_REGISTRY[ARANGO_VALIDATE_GRAPH_INTEGRITY] = ToolRegistration(
+    name=ARANGO_VALIDATE_GRAPH_INTEGRITY,
+    description="Verify graph consistency, orphaned edges, and constraint violations.",
+    model=ValidateGraphIntegrityArgs,
+    handler=handle_validate_graph_integrity,
+)
+
+TOOL_REGISTRY[ARANGO_GRAPH_STATISTICS] = ToolRegistration(
+    name=ARANGO_GRAPH_STATISTICS,
+    description="Generate comprehensive graph analytics (vertex/edge counts, degree distribution, connectivity metrics).",
+    model=GraphStatisticsArgs,
+    handler=handle_graph_statistics,
+)
 
 
 @asynccontextmanager
@@ -153,6 +400,15 @@ async def server_lifespan(server: Server) -> AsyncIterator[Dict[str, Any]]:
     )
 
     logger = logging.getLogger("mcp_arangodb_async.entry")
+
+    # Validate tool registry is properly populated
+    if not TOOL_REGISTRY:
+        logger.error("Tool registry is empty - no tools registered")
+        raise RuntimeError(
+            "Tool registry is empty. No tools have been registered. "
+            "This indicates a critical initialization error."
+        )
+    logger.info(f"Tool registry validated: {len(TOOL_REGISTRY)} tools registered")
 
     cfg = load_config()
     client = None
@@ -201,183 +457,29 @@ server = Server("mcp-arangodb-async", lifespan=server_lifespan)
 
 @server.list_tools()
 async def handle_list_tools() -> List[types.Tool]:
+    """Generate tool list from registry.
+
+    Dynamically builds the MCP tool list from TOOL_REGISTRY, ensuring
+    consistency between tool metadata and handler dispatch.
+
+    Returns:
+        List of MCP Tool objects with name, description, and input schema
+    """
+    # Build tools from registry
     tools: List[types.Tool] = [
         types.Tool(
-            name=ARANGO_QUERY,
-            description="Execute an AQL query with optional bind vars and return rows.",
-            inputSchema=QueryArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_LIST_COLLECTIONS,
-            description="List non-system collection names.",
-            inputSchema=ListCollectionsArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_INSERT,
-            description="Insert a document into a collection.",
-            inputSchema=InsertArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_UPDATE,
-            description="Update a document by key in a collection.",
-            inputSchema=UpdateArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_REMOVE,
-            description="Remove a document by key in a collection.",
-            inputSchema=RemoveArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_CREATE_COLLECTION,
-            description="Create a collection (document or edge).",
-            inputSchema=CreateCollectionArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_BACKUP,
-            description="Backup collections to JSON files.",
-            inputSchema=BackupArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_LIST_INDEXES,
-            description="List indexes for a collection.",
-            inputSchema=ListIndexesArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_CREATE_INDEX,
-            description="Create an index on a collection (persistent, hash, skiplist, ttl, fulltext, geo).",
-            inputSchema=CreateIndexArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_DELETE_INDEX,
-            description="Delete an index by id or name from a collection.",
-            inputSchema=DeleteIndexArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_EXPLAIN_QUERY,
-            description="Explain an AQL query and return execution plans and optional index suggestions.",
-            inputSchema=ExplainQueryArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_VALIDATE_REFERENCES,
-            description="Validate that documents in a collection have valid references in specified fields.",
-            inputSchema=ValidateReferencesArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_INSERT_WITH_VALIDATION,
-            description="Insert a document after validating its reference fields.",
-            inputSchema=InsertWithValidationArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_BULK_INSERT,
-            description="Bulk insert documents with batching and basic error handling.",
-            inputSchema=BulkInsertArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_BULK_UPDATE,
-            description="Bulk update documents by key with batching.",
-            inputSchema=BulkUpdateArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_CREATE_GRAPH,
-            description="Create a named graph with edge definitions (optionally creating collections).",
-            inputSchema=CreateGraphArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_ADD_EDGE,
-            description="Add an edge document between two vertices with optional attributes.",
-            inputSchema=AddEdgeArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_TRAVERSE,
-            description="Traverse graph from a start vertex with depth bounds (by graph or edge collections).",
-            inputSchema=TraverseArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_SHORTEST_PATH,
-            description="Compute the shortest path between two vertices (by graph or edge collections).",
-            inputSchema=ShortestPathArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_LIST_GRAPHS,
-            description="List available graphs in the database.",
-            inputSchema=ListGraphsArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_ADD_VERTEX_COLLECTION,
-            description="Add a vertex collection to a named graph.",
-            inputSchema=AddVertexCollectionArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_ADD_EDGE_DEFINITION,
-            description="Create an edge definition in a named graph.",
-            inputSchema=AddEdgeDefinitionArgs.model_json_schema(),
-        ),
-        # Alias to match requested naming; same schema as TraverseArgs
-        types.Tool(
-            name=ARANGO_GRAPH_TRAVERSAL,
-            description="Alias for arango_traverse (graph traversal by graph or edge collections).",
-            inputSchema=TraverseArgs.model_json_schema(),
-        ),
-        # Alias for vertex insert; reuses InsertArgs
-        types.Tool(
-            name=ARANGO_ADD_VERTEX,
-            description="Alias for arango_insert (insert a vertex document into a collection).",
-            inputSchema=InsertArgs.model_json_schema(),
-        ),
-        # Schema management
-        types.Tool(
-            name=ARANGO_CREATE_SCHEMA,
-            description="Create or update a named JSON Schema for a collection.",
-            inputSchema=CreateSchemaArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_VALIDATE_DOCUMENT,
-            description="Validate a document against a stored or inline JSON Schema.",
-            inputSchema=ValidateDocumentArgs.model_json_schema(),
-        ),
-        # Enhanced query tools
-        types.Tool(
-            name=ARANGO_QUERY_BUILDER,
-            description="Build and execute a simple AQL query from filters, sort, and limit.",
-            inputSchema=QueryBuilderArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_QUERY_PROFILE,
-            description="Explain a query and return plans/stats for profiling.",
-            inputSchema=QueryProfileArgs.model_json_schema(),
-        ),
-        # Graph Management Tools (Phase 5)
-        types.Tool(
-            name=ARANGO_BACKUP_GRAPH,
-            description="Export complete graph structure including vertices, edges, and metadata.",
-            inputSchema=BackupGraphArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_RESTORE_GRAPH,
-            description="Import graph data with referential integrity validation and conflict resolution.",
-            inputSchema=RestoreGraphArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_BACKUP_NAMED_GRAPHS,
-            description="Backup graph definitions from _graphs system collection.",
-            inputSchema=BackupNamedGraphsArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_VALIDATE_GRAPH_INTEGRITY,
-            description="Verify graph consistency, orphaned edges, and constraint violations.",
-            inputSchema=ValidateGraphIntegrityArgs.model_json_schema(),
-        ),
-        types.Tool(
-            name=ARANGO_GRAPH_STATISTICS,
-            description="Generate comprehensive graph analytics (vertex/edge counts, degree distribution, connectivity metrics).",
-            inputSchema=GraphStatisticsArgs.model_json_schema(),
-        ),
+            name=reg.name,
+            description=reg.description,
+            inputSchema=reg.model.model_json_schema(),
+        )
+        for reg in TOOL_REGISTRY.values()
     ]
 
     # Compatibility: during pytest integration tests, expect baseline 7 tools.
     # Respect explicit override via MCP_COMPAT_TOOLSET=full to test the full set.
     compat = os.getenv("MCP_COMPAT_TOOLSET")
     if compat == "baseline" or (compat is None and os.getenv("PYTEST_CURRENT_TEST")):
+        # Return first 7 tools in registry order
         return tools[:7]
     return tools
 
@@ -439,56 +541,32 @@ def _invoke_handler(handler: Callable, db: StandardDatabase, args: Dict[str, Any
 
 @server.call_tool()
 async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]:
+    """Execute a tool by dispatching to its registered handler.
+
+    Uses TOOL_REGISTRY for O(1) lookup and dispatch, replacing the previous
+    O(n) if-elif chain. Maintains all existing features: validation, lazy
+    connect, error handling.
+
+    Args:
+        name: Tool name to execute
+        arguments: Raw arguments dictionary from MCP client
+
+    Returns:
+        List of MCP Content objects (typically JSON text content)
+    """
     logger = logging.getLogger("mcp_arangodb_async.entry")
     # Access lifespan context; may not have connected (graceful degradation)
     ctx = server.request_context
     db = ctx.lifespan_context.get("db") if ctx and ctx.lifespan_context else None
 
-    # Map tool to its Pydantic model for argument validation
-    model_map = {
-        ARANGO_QUERY: QueryArgs,
-        ARANGO_LIST_COLLECTIONS: ListCollectionsArgs,
-        ARANGO_INSERT: InsertArgs,
-        ARANGO_UPDATE: UpdateArgs,
-        ARANGO_REMOVE: RemoveArgs,
-        ARANGO_CREATE_COLLECTION: CreateCollectionArgs,
-        ARANGO_BACKUP: BackupArgs,
-        ARANGO_LIST_INDEXES: ListIndexesArgs,
-        ARANGO_CREATE_INDEX: CreateIndexArgs,
-        ARANGO_DELETE_INDEX: DeleteIndexArgs,
-        ARANGO_EXPLAIN_QUERY: ExplainQueryArgs,
-        ARANGO_VALIDATE_REFERENCES: ValidateReferencesArgs,
-        ARANGO_INSERT_WITH_VALIDATION: InsertWithValidationArgs,
-        ARANGO_BULK_INSERT: BulkInsertArgs,
-        ARANGO_BULK_UPDATE: BulkUpdateArgs,
-        ARANGO_CREATE_GRAPH: CreateGraphArgs,
-        ARANGO_ADD_EDGE: AddEdgeArgs,
-        ARANGO_TRAVERSE: TraverseArgs,
-        ARANGO_SHORTEST_PATH: ShortestPathArgs,
-        ARANGO_LIST_GRAPHS: ListGraphsArgs,
-        ARANGO_ADD_VERTEX_COLLECTION: AddVertexCollectionArgs,
-        ARANGO_ADD_EDGE_DEFINITION: AddEdgeDefinitionArgs,
-        ARANGO_GRAPH_TRAVERSAL: TraverseArgs,
-        ARANGO_ADD_VERTEX: InsertArgs,
-        ARANGO_CREATE_SCHEMA: CreateSchemaArgs,
-        ARANGO_VALIDATE_DOCUMENT: ValidateDocumentArgs,
-        ARANGO_QUERY_BUILDER: QueryBuilderArgs,
-        ARANGO_QUERY_PROFILE: QueryProfileArgs,
-        # New graph management tools
-        ARANGO_BACKUP_GRAPH: BackupGraphArgs,
-        ARANGO_RESTORE_GRAPH: RestoreGraphArgs,
-        ARANGO_BACKUP_NAMED_GRAPHS: BackupNamedGraphsArgs,
-        ARANGO_VALIDATE_GRAPH_INTEGRITY: ValidateGraphIntegrityArgs,
-        ARANGO_GRAPH_STATISTICS: GraphStatisticsArgs,
-    }
-
-    Model = model_map.get(name)
-    if Model is None:
+    # Look up tool in registry
+    tool_reg = TOOL_REGISTRY.get(name)
+    if tool_reg is None:
         return _json_content({"error": f"Unknown tool: {name}"})
 
     # Validate incoming arguments strictly via Pydantic
     try:
-        parsed = Model(**(arguments or {}))
+        parsed = tool_reg.model(**(arguments or {}))
         validated_args: Dict[str, Any] = parsed.model_dump(exclude_none=True)
     except ValidationError as ve:
         return _json_content({
@@ -516,114 +594,10 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
                 "hint": "Ensure ArangoDB is reachable or check ARANGO_* environment variables.",
             })
 
+    # Dispatch to handler via registry (O(1) lookup)
     try:
-
-        if name == ARANGO_QUERY:
-            result = _invoke_handler(handle_arango_query, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_LIST_COLLECTIONS:
-            result = _invoke_handler(handle_list_collections, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_INSERT:
-            result = _invoke_handler(handle_insert, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_UPDATE:
-            result = _invoke_handler(handle_update, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_REMOVE:
-            result = _invoke_handler(handle_remove, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_CREATE_COLLECTION:
-            result = _invoke_handler(handle_create_collection, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_BACKUP:
-            result = _invoke_handler(handle_backup, db, validated_args)
-            return _json_content(result)
-
-        if name == ARANGO_LIST_INDEXES:
-            result = _invoke_handler(handle_list_indexes, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_CREATE_INDEX:
-            result = _invoke_handler(handle_create_index, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_DELETE_INDEX:
-            result = _invoke_handler(handle_delete_index, db, validated_args)
-            return _json_content(result)
-
-        if name == ARANGO_EXPLAIN_QUERY:
-            result = _invoke_handler(handle_explain_query, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_VALIDATE_REFERENCES:
-            result = _invoke_handler(handle_validate_references, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_INSERT_WITH_VALIDATION:
-            result = _invoke_handler(handle_insert_with_validation, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_BULK_INSERT:
-            result = _invoke_handler(handle_bulk_insert, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_BULK_UPDATE:
-            result = _invoke_handler(handle_bulk_update, db, validated_args)
-            return _json_content(result)
-
-        if name == ARANGO_CREATE_GRAPH:
-            result = _invoke_handler(handle_create_graph, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_ADD_EDGE:
-            result = _invoke_handler(handle_add_edge, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_TRAVERSE:
-            result = _invoke_handler(handle_traverse, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_SHORTEST_PATH:
-            result = _invoke_handler(handle_shortest_path, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_LIST_GRAPHS:
-            result = _invoke_handler(handle_list_graphs, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_ADD_VERTEX_COLLECTION:
-            result = _invoke_handler(handle_add_vertex_collection, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_ADD_EDGE_DEFINITION:
-            result = _invoke_handler(handle_add_edge_definition, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_GRAPH_TRAVERSAL:
-            result = _invoke_handler(handle_traverse, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_ADD_VERTEX:
-            result = _invoke_handler(handle_insert, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_CREATE_SCHEMA:
-            result = _invoke_handler(handle_create_schema, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_VALIDATE_DOCUMENT:
-            result = _invoke_handler(handle_validate_document, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_QUERY_BUILDER:
-            result = _invoke_handler(handle_query_builder, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_QUERY_PROFILE:
-            result = _invoke_handler(handle_query_profile, db, validated_args)
-            return _json_content(result)
-
-        # Graph Management Tools (Phase 5)
-        if name == ARANGO_BACKUP_GRAPH:
-            result = _invoke_handler(handle_backup_graph, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_RESTORE_GRAPH:
-            result = _invoke_handler(handle_restore_graph, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_BACKUP_NAMED_GRAPHS:
-            result = _invoke_handler(handle_backup_named_graphs, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_VALIDATE_GRAPH_INTEGRITY:
-            result = _invoke_handler(handle_validate_graph_integrity, db, validated_args)
-            return _json_content(result)
-        if name == ARANGO_GRAPH_STATISTICS:
-            result = _invoke_handler(handle_graph_statistics, db, validated_args)
-            return _json_content(result)
-
-        return _json_content({"error": f"Unknown tool: {name}"})
+        result = _invoke_handler(tool_reg.handler, db, validated_args)
+        return _json_content(result)
     except Exception as e:
         logger.exception("Error executing tool '%s'", name)
         return _json_content({
