@@ -426,9 +426,10 @@ setattr(
 )
 
 
-async def run() -> None:
-    """Run the MCP server with stdio transport.
-    
+async def run_stdio() -> None:
+    """Run the MCP server with stdio transport (original implementation).
+
+    This is the default transport for desktop AI clients like Claude Desktop.
     Sets up the server with proper initialization options and runs it
     until termination.
     """
@@ -438,7 +439,7 @@ async def run() -> None:
             write_stream,
             InitializationOptions(
                 server_name="mcp-arangodb-async",
-                server_version="0.1.0",
+                server_version="0.2.5",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},
@@ -447,13 +448,46 @@ async def run() -> None:
         )
 
 
-def main() -> None:
+async def run(transport_config: "TransportConfig | None" = None) -> None:
+    """
+    Run the MCP server with specified transport.
+
+    Args:
+        transport_config: Transport configuration. If None, uses stdio (default).
+    """
+    # Import here to avoid circular dependency and to make HTTP dependencies optional
+    from .transport_config import TransportConfig
+
+    if transport_config is None:
+        transport_config = TransportConfig()  # Default to stdio
+
+    if transport_config.transport == "stdio":
+        await run_stdio()
+    elif transport_config.transport == "http":
+        # Import HTTP transport only when needed
+        from .http_transport import run_http_server
+
+        await run_http_server(
+            server,
+            host=transport_config.http_host,
+            port=transport_config.http_port,
+            stateless=transport_config.http_stateless,
+            cors_origins=transport_config.http_cors_origins,
+        )
+    else:
+        raise ValueError(f"Unknown transport: {transport_config.transport}")
+
+
+def main(transport_config: "TransportConfig | None" = None) -> None:
     """Console script entry point for arango-server command.
-    
+
     This is the main entry point that starts the async MCP server.
     Used by the console script defined in pyproject.toml.
+
+    Args:
+        transport_config: Optional transport configuration. If None, uses stdio (default).
     """
-    asyncio.run(run())
+    asyncio.run(run(transport_config))
 
 
 if __name__ == "__main__":

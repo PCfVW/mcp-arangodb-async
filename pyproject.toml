@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-arangodb-async"
-version = "0.2.2"
+version = "0.2.5"
 description = "A Model Context Protocol server for ArangoDB"
 readme = "README.md"
 license = "Apache-2.0"
@@ -26,9 +26,11 @@ requires-python = ">=3.11"
 dependencies = [
     "python-arango>=7.6,<8",
     "python-dotenv>=1.0,<2",
-    "mcp>=1.6",
+    "mcp>=1.18.0",
     "pydantic>=2,<3",
     "jsonschema>=4,<5",
+    "starlette>=0.27.0,<1.0",
+    "uvicorn[standard]>=0.23.0,<1.0",
 ]
 
 [project.optional-dependencies]
