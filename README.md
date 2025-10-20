@@ -1,7 +1,7 @@
 # ArangoDB MCP Server for Python
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://github.com/PCfVW/mcp-arango-async/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://github.com/PCfVW/mcp-arango-async/blob/master/LICENSE)
 [![MCP](https://img.shields.io/badge/Protocol-MCP-%23555555)](https://modelcontextprotocol.io/)
 [![PyPI](https://img.shields.io/pypi/v/mcp-arangodb-async)](https://pypi.org/project/mcp-arangodb-async/)
 
@@ -11,10 +11,10 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 
 ## Quick Links
 
-📚 **Documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/main/docs](https://github.com/PCfVW/mcp-arango-async/tree/main/docs)  
-🚀 **Quick Start:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/quickstart-stdio.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/quickstart-stdio.md)  
-🔧 **Installation:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/installation.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/installation.md)  
-📖 **Tools Reference:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/tools-reference.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/tools-reference.md)  
+📚 **Documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/master/docs](https://github.com/PCfVW/mcp-arango-async/tree/master/docs)
+🚀 **Quick Start:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md)
+🔧 **Installation:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md)
+📖 **Tools Reference:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md)
 🐛 **Issues:** [https://github.com/PCfVW/mcp-arango-async/issues](https://github.com/PCfVW/mcp-arango-async/issues)
 
 ---
@@ -75,7 +75,7 @@ python -m mcp_arangodb_async --health
 {"status": "healthy", "database_connected": true, "database_info": {"version": "3.11.x", "name": "mcp_arangodb_test"}}
 ```
 
-📖 **Detailed installation guide:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/installation.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/installation.md)
+📖 **Detailed installation guide:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md)
 
 ---
 
@@ -92,12 +92,12 @@ Edit `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/Claud
   "mcpServers": {
     "arangodb": {
       "command": "python",
-      "args": ["-m", "mcp_arangodb_async"],
+      "args": ["-m", "mcp_arangodb_async", "server"],
       "env": {
         "ARANGO_URL": "http://localhost:8529",
         "ARANGO_DB": "mcp_arangodb_test",
-        "ARANGO_USERNAME": "root",
-        "ARANGO_PASSWORD": "changeme"
+        "ARANGO_USERNAME": "mcp_arangodb_user",
+        "ARANGO_PASSWORD": "mcp_arangodb_password"
       }
     }
   }
@@ -110,7 +110,7 @@ Edit `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/Claud
 
 Ask Claude: *"List all collections in the ArangoDB database"*
 
-📖 **Full stdio quickstart:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/quickstart-stdio.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/quickstart-stdio.md)
+📖 **Full stdio quickstart:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md)
 
 ---
 
@@ -142,7 +142,7 @@ await client.connect();
 const tools = await client.listTools();
 ```
 
-📖 **HTTP transport guide:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/http-transport.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/http-transport.md)
+📖 **HTTP transport guide:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/http-transport.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/http-transport.md)
 
 ---
 
@@ -175,7 +175,7 @@ ARANGO_CONNECT_DELAY_SEC=1.0           # Retry delay
 LOG_LEVEL=INFO                         # DEBUG, INFO, WARNING, ERROR
 ```
 
-📖 **Complete configuration reference:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/configuration/environment-variables.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/configuration/environment-variables.md)
+📖 **Complete configuration reference:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/configuration/environment-variables.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/configuration/environment-variables.md)
 
 ---
 
@@ -235,7 +235,7 @@ The server exposes **34 MCP tools** organized into 9 categories:
 - `arango_graph_statistics` - Graph statistics
 - `arango_database_status` - Database status
 
-📖 **Complete tools reference:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/tools-reference.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/tools-reference.md)
+📖 **Complete tools reference:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md)
 
 ---
 
@@ -261,35 +261,35 @@ Ask Claude: "Check for circular dependencies in the codebase graph"
 Ask Claude: "Export the codebase graph structure as Markdown for visualization"
 ```
 
-📖 **More examples:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/examples/codebase-analysis.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/examples/codebase-analysis.md)
+📖 **More examples:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/examples/codebase-analysis.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/examples/codebase-analysis.md)
 
 ---
 
 ## Documentation
 
 ### Getting Started
-- [Installation Guide](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/installation.md)
-- [Quick Start (stdio)](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/quickstart-stdio.md)
-- [First Interaction](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/first-interaction.md)
+- [Installation Guide](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md)
+- [Quick Start (stdio)](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md)
+- [First Interaction](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/first-interaction.md)
 
 ### Configuration
-- [Transport Configuration](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/configuration/transport-configuration.md)
-- [Environment Variables](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/configuration/environment-variables.md)
+- [Transport Configuration](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/configuration/transport-configuration.md)
+- [Environment Variables](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/configuration/environment-variables.md)
 
 ### User Guide
-- [Tools Reference](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/tools-reference.md)
-- [Troubleshooting](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/troubleshooting.md)
+- [Tools Reference](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md)
+- [Troubleshooting](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/troubleshooting.md)
 
 ### Developer Guide
-- [Architecture Overview](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/architecture.md)
-- [Low-Level MCP Rationale](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/low-level-mcp-rationale.md)
-- [HTTP Transport](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/http-transport.md)
-- [Changelog](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/changelog.md)
+- [Architecture Overview](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/architecture.md)
+- [Low-Level MCP Rationale](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/low-level-mcp-rationale.md)
+- [HTTP Transport](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/http-transport.md)
+- [Changelog](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/changelog.md)
 
 ### Examples
-- [Codebase Dependency Analysis](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/examples/codebase-analysis.md)
+- [Codebase Dependency Analysis](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/examples/codebase-analysis.md)
 
-📖 **Full documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/main/docs](https://github.com/PCfVW/mcp-arango-async/tree/main/docs)
+📖 **Full documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/master/docs](https://github.com/PCfVW/mcp-arango-async/tree/master/docs)
 
 ---
 
@@ -327,7 +327,7 @@ python -m mcp_arangodb_async --health
 - Check environment variables are set correctly
 - Review server logs for detailed error messages
 
-📖 **Complete troubleshooting guide:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/troubleshooting.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/user-guide/troubleshooting.md)
+📖 **Complete troubleshooting guide:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/troubleshooting.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/troubleshooting.md)
 
 ---
 
@@ -350,7 +350,7 @@ python -m mcp_arangodb_async --health
 
 ⚠️ **Important:** This repository does not grant rights to ArangoDB binaries. You must comply with ArangoDB's license for your deployment version.
 
-📖 **License details:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/installation.md#arangodb-licensing](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/installation.md#arangodb-licensing)
+📖 **License details:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md#arangodb-licensing](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md#arangodb-licensing)
 
 ---
 
@@ -358,7 +358,7 @@ python -m mcp_arangodb_async --health
 
 Contributions are welcome! Please see our documentation for guidelines.
 
-📖 **Architecture decisions:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/low-level-mcp-rationale.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/low-level-mcp-rationale.md)
+📖 **Architecture decisions:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/low-level-mcp-rationale.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/low-level-mcp-rationale.md)
 
 ---
 
@@ -366,7 +366,7 @@ Contributions are welcome! Please see our documentation for guidelines.
 
 - **Issues:** [https://github.com/PCfVW/mcp-arango-async/issues](https://github.com/PCfVW/mcp-arango-async/issues)
 - **Discussions:** [https://github.com/PCfVW/mcp-arango-async/discussions](https://github.com/PCfVW/mcp-arango-async/discussions)
-- **Documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/main/docs](https://github.com/PCfVW/mcp-arango-async/tree/main/docs)
+- **Documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/master/docs](https://github.com/PCfVW/mcp-arango-async/tree/master/docs)
 
 ---
 
