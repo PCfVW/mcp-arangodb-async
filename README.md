@@ -261,7 +261,7 @@ Ask Claude: "Check for circular dependencies in the codebase graph"
 Ask Claude: "Export the codebase graph structure as Markdown for visualization"
 ```
 
-📖 **More examples:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/first-interaction.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/getting-started/first-interaction.md)
+📖 **More examples:** [https://github.com/PCfVW/mcp-arango-async/blob/main/docs/examples/codebase-analysis.md](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/examples/codebase-analysis.md)
 
 ---
 
@@ -285,6 +285,9 @@ Ask Claude: "Export the codebase graph structure as Markdown for visualization"
 - [Low-Level MCP Rationale](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/low-level-mcp-rationale.md)
 - [HTTP Transport](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/http-transport.md)
 - [Changelog](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/developer-guide/changelog.md)
+
+### Examples
+- [Codebase Dependency Analysis](https://github.com/PCfVW/mcp-arango-async/blob/main/docs/examples/codebase-analysis.md)
 
 📖 **Full documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/main/docs](https://github.com/PCfVW/mcp-arango-async/tree/main/docs)
 

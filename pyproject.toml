@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-arangodb-async"
-version = "0.2.7"
+version = "0.3.0"
 description = "A Model Context Protocol server for ArangoDB"
 readme = "README.md"
 license = "Apache-2.0"
