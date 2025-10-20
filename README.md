@@ -12,9 +12,13 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 ## Quick Links
 
 📚 **Documentation:** [https://github.com/PCfVW/mcp-arango-async/tree/master/docs](https://github.com/PCfVW/mcp-arango-async/tree/master/docs)
+
 🚀 **Quick Start:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md)
+
 🔧 **Installation:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/installation.md)
+
 📖 **Tools Reference:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md)
+
 🐛 **Issues:** [https://github.com/PCfVW/mcp-arango-async/issues](https://github.com/PCfVW/mcp-arango-async/issues)
 
 ---
