@@ -83,6 +83,19 @@ Configure the server for different environments.
 
 ---
 
+### 💡 Examples (Real-World Use Cases)
+
+Sophisticated examples demonstrating advanced capabilities.
+
+1. **[Codebase Dependency Analysis](examples/codebase-analysis.md)** (45-60 min)
+   - Graph modeling for software architecture
+   - Dependency analysis and circular detection
+   - Impact analysis for refactoring
+   - Function call chain analysis
+   - Module complexity scoring
+
+---
+
 ### 🏗️ Developer Guide (Contributors & Advanced Users)
 
 Understand the internals and contribute to the project.
@@ -131,7 +144,8 @@ Understand the internals and contribute to the project.
 2. [Quick Start (stdio)](getting-started/quickstart-stdio.md) → Configure Claude Desktop
 3. [First Interaction](getting-started/first-interaction.md) → Test with prompts
 4. [Tools Reference](user-guide/tools-reference.md) → Learn available tools
-5. [Troubleshooting Guide](user-guide/troubleshooting.md) → Fix issues
+5. [Codebase Analysis Example](examples/codebase-analysis.md) → Advanced graph usage
+6. [Troubleshooting Guide](user-guide/troubleshooting.md) → Fix issues
 
 ---
 
