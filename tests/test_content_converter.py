@@ -70,7 +70,7 @@ class TestMCPContentConverter:
         text = result[0].text
         
         assert "# Graph Report" in text
-        assert "## Graph Name" in text
+        assert "**Graph Name:** test_graph" in text
         assert "**Total Vertices:** 100" in text
         assert "## Statistics" in text
 

@@ -267,7 +267,7 @@ def _json_content(data: Any) -> List[types.Content]:
 def _invoke_handler(
     handler: Callable, db: StandardDatabase, args: Dict[str, Any]
 ) -> Any:
-    """Invoke handler function with appropriate signature based on its parameter requirements.
+    """Invoke handler function with appropriate signature based on parameter inspection.
 
     This function provides dual signature support to handle two different calling conventions:
 
@@ -281,10 +281,11 @@ def _invoke_handler(
        - Matches the documented handler signature pattern: (db, args: Dict[str, Any])
        - More efficient as it avoids dictionary unpacking
 
-    The try/catch mechanism automatically detects which signature the handler expects:
-    - First attempts kwargs expansion for test compatibility
-    - Falls back to single args dict for production handlers
-    - TypeError from wrong parameter count triggers the fallback
+    The signature inspection mechanism deterministically detects which signature the handler expects:
+    - Inspects handler parameters to check for **kwargs parameter
+    - Uses kwargs expansion for handlers with **kwargs (test compatibility)
+    - Uses single args dict for handlers without **kwargs (production handlers)
+    - No try/catch overhead, deterministic signature detection
 
     Args:
         handler: Handler function to invoke (either real implementation or test mock)
@@ -299,12 +300,23 @@ def _invoke_handler(
         comprehensive testing. The pattern handles the semantic difference between
         handlers that require arguments vs. those that don't (e.g., list_collections).
     """
-    try:
-        # Attempt test-compatible signature: handler(db, **args)
+    import inspect
+
+    # Inspect handler signature to determine calling convention
+    sig = inspect.signature(handler)
+
+    # Check if handler has **kwargs parameter (test compatibility mode)
+    has_var_keyword = any(
+        p.kind == inspect.Parameter.VAR_KEYWORD
+        for p in sig.parameters.values()
+    )
+
+    if has_var_keyword:
+        # Test-compatible signature: handler(db, **args)
         # This allows mocked handlers in tests to inspect individual parameters
         return handler(db, **args)
-    except TypeError:
-        # Fallback to production signature: handler(db, args)
+    else:
+        # Production signature: handler(db, args)
         # This matches the documented handler pattern for real implementations
         return handler(db, args)
 
@@ -463,7 +475,7 @@ async def run_stdio() -> None:
             write_stream,
             InitializationOptions(
                 server_name="mcp-arangodb-async",
-                server_version="0.3.1",
+                server_version="0.3.2",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},

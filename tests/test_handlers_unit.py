@@ -588,7 +588,9 @@ class TestGraphManagementHandlers:
             "test_graph",
             True,
             True,
-            100
+            100,
+            False,  # aggregate_collections
+            False   # per_collection_stats
         )
 
     def test_handle_graph_statistics_minimal_args(self, mock_calculate_graph_statistics_function):
@@ -603,5 +605,7 @@ class TestGraphManagementHandlers:
             None,  # graph_name default
             True,  # include_degree_distribution default
             True,  # include_connectivity default
-            None   # sample_size default
+            None,  # sample_size default
+            False, # aggregate_collections default
+            False  # per_collection_stats default
         )

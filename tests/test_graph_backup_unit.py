@@ -4,7 +4,7 @@ import json
 import os
 import pytest
 from tempfile import TemporaryDirectory
-from unittest.mock import Mock, MagicMock, patch, mock_open
+from unittest.mock import Mock, MagicMock, patch, mock_open, ANY
 
 from mcp_arangodb_async.graph_backup import (
     backup_graph_to_dir,
@@ -87,9 +87,16 @@ class TestBackupGraphToDir:
                 
                 result = backup_graph_to_dir(mock_db, "test_graph", tmp_dir, doc_limit=5)
                 
-                # Verify doc_limit was passed to backup function
-                mock_backup_col.assert_called_with(mock_db, "vertices", mock.ANY, 5)
-                mock_backup_col.assert_called_with(mock_db, "edges", mock.ANY, 5)
+                # Verify doc_limit was passed to backup function for both collections
+                assert mock_backup_col.call_count == 2
+                calls = mock_backup_col.call_args_list
+                # Check that both vertices and edges were backed up with doc_limit=5
+                call_collections = [call[0][1] for call in calls]  # Extract collection names
+                assert "vertices" in call_collections
+                assert "edges" in call_collections
+                # Verify doc_limit parameter for all calls
+                for call in calls:
+                    assert call[0][3] == 5  # doc_limit parameter
 
     def test_backup_graph_without_metadata(self):
         """Test graph backup without metadata."""

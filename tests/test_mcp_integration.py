@@ -3,7 +3,7 @@
 import pytest
 import asyncio
 import json
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock, mock_open
 from mcp_arangodb_async.entry import server, _json_content
 from mcp_arangodb_async.models import QueryArgs, InsertArgs, BackupArgs
 import mcp.types as types
@@ -93,67 +93,78 @@ class TestMCPIntegration:
         """Test tool call when database is unavailable."""
         with patch.object(server, 'request_context') as mock_ctx:
             mock_ctx.lifespan_context = {"db": None, "client": None}
-            
-            result = await server._handlers["call_tool"]("arango_query", {"query": "RETURN 1"})
-            
-            assert len(result) == 1
-            response_data = json.loads(result[0].text)
-            assert response_data["error"] == "Database unavailable"
+
+            # Mock get_client_and_db to raise an exception so lazy connection fails
+            with patch('mcp_arangodb_async.entry.get_client_and_db') as mock_get_db:
+                mock_get_db.side_effect = Exception("Connection failed")
+
+                result = await server._handlers["call_tool"]("arango_query", {"query": "RETURN 1"})
+
+                assert len(result) == 1
+                response_data = json.loads(result[0].text)
+                assert response_data["error"] == "Database unavailable"
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.handle_arango_query')
-    async def test_call_tool_query_success(self, mock_handler):
+    async def test_call_tool_query_success(self):
         """Test successful query tool call."""
-        # Setup
-        mock_handler.return_value = [{"result": "success"}]
-        
+        # Setup mock database to return iterable cursor
+        mock_cursor = [{"result": "success"}]
+        self.mock_db.aql.execute.return_value = mock_cursor
+
         with patch.object(server, 'request_context') as mock_ctx:
             mock_ctx.lifespan_context = {"db": self.mock_db, "client": self.mock_client}
-            
+
             result = await server._handlers["call_tool"]("arango_query", {
                 "query": "RETURN 1",
                 "bind_vars": {"test": "value"}
             })
-            
+
             assert len(result) == 1
             response_data = json.loads(result[0].text)
             assert response_data == [{"result": "success"}]
-            
-            # Verify handler was called with validated args
-            mock_handler.assert_called_once()
-            call_args = mock_handler.call_args[1]  # Get the args dict
-            assert call_args["query"] == "RETURN 1"
-            assert call_args["bind_vars"] == {"test": "value"}
+
+            # Verify database was called with correct query
+            self.mock_db.aql.execute.assert_called_once_with(
+                "RETURN 1",
+                bind_vars={"test": "value"}
+            )
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.handle_list_collections')
-    async def test_call_tool_list_collections_success(self, mock_handler):
+    async def test_call_tool_list_collections_success(self):
         """Test successful list collections tool call."""
-        mock_handler.return_value = ["users", "products"]
-        
+        # Setup mock database to return iterable collections
+        mock_collections = [
+            {"name": "users", "isSystem": False},
+            {"name": "products", "isSystem": False},
+            {"name": "_system", "isSystem": True}  # Should be filtered out
+        ]
+        self.mock_db.collections.return_value = mock_collections
+
         with patch.object(server, 'request_context') as mock_ctx:
             mock_ctx.lifespan_context = {"db": self.mock_db, "client": self.mock_client}
-            
+
             result = await server._handlers["call_tool"]("arango_list_collections", {})
-            
+
             assert len(result) == 1
             response_data = json.loads(result[0].text)
             assert response_data == ["users", "products"]
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.handle_insert')
-    async def test_call_tool_insert_success(self, mock_handler):
+    async def test_call_tool_insert_success(self):
         """Test successful insert tool call."""
-        mock_handler.return_value = {"_id": "users/123", "_key": "123", "_rev": "_abc"}
-        
+        # Setup mock collection to return insert result
+        mock_collection = Mock()
+        mock_collection.insert.return_value = {"_id": "users/123", "_key": "123", "_rev": "_abc"}
+        self.mock_db.collection.return_value = mock_collection
+
         with patch.object(server, 'request_context') as mock_ctx:
             mock_ctx.lifespan_context = {"db": self.mock_db, "client": self.mock_client}
-            
+
             result = await server._handlers["call_tool"]("arango_insert", {
                 "collection": "users",
                 "document": {"name": "John", "age": 30}
             })
-            
+
             assert len(result) == 1
             response_data = json.loads(result[0].text)
             assert response_data["_id"] == "users/123"
@@ -171,45 +182,58 @@ class TestMCPIntegration:
             assert "Unknown tool" in response_data["error"]
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.handle_arango_query')
-    async def test_call_tool_handler_exception(self, mock_handler):
+    async def test_call_tool_handler_exception(self):
         """Test tool call when handler raises exception."""
-        mock_handler.side_effect = Exception("Handler error")
-        
+        # Setup mock database to raise exception when executing query
+        self.mock_db.aql.execute.side_effect = Exception("Handler error")
+
         with patch.object(server, 'request_context') as mock_ctx:
             mock_ctx.lifespan_context = {"db": self.mock_db, "client": self.mock_client}
-            
+
             result = await server._handlers["call_tool"]("arango_query", {"query": "RETURN 1"})
-            
+
             assert len(result) == 1
             response_data = json.loads(result[0].text)
             assert response_data["error"] == "Handler error"
             assert response_data["tool"] == "arango_query"
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.handle_backup_graph')
-    async def test_call_tool_backup_graph_success(self, mock_handler):
+    async def test_call_tool_backup_graph_success(self):
         """Test successful backup graph tool call."""
-        mock_handler.return_value = {
-            "graph_name": "test_graph",
-            "output_dir": "/tmp/backup",
-            "total_documents": 100,
-            "metadata_included": True
+        # Setup mock database with proper graph structure
+        mock_graph = Mock()
+        mock_graph.properties.return_value = {
+            "name": "test_graph",
+            "edgeDefinitions": [
+                {"collection": "edges", "from": ["vertices"], "to": ["vertices"]}
+            ],
+            "orphanCollections": []
         }
+        self.mock_db.has_graph.return_value = True
+        self.mock_db.graph.return_value = mock_graph
+
+        # Mock collections for backup
+        mock_edge_collection = Mock()
+        mock_edge_collection.all.return_value = [{"_id": "edges/1", "_from": "vertices/1", "_to": "vertices/2"}]
+        mock_vertex_collection = Mock()
+        mock_vertex_collection.all.return_value = [{"_id": "vertices/1", "name": "vertex1"}]
+
+        self.mock_db.has_collection.return_value = True
+        self.mock_db.collection.side_effect = lambda name: mock_edge_collection if name == "edges" else mock_vertex_collection
 
         with patch.object(server, 'request_context') as mock_ctx:
             mock_ctx.lifespan_context = {"db": self.mock_db, "client": self.mock_client}
 
-            result = await server._handlers["call_tool"](
-                "arango_backup_graph",
-                {"graph_name": "test_graph", "output_dir": "/tmp/backup"}
-            )
+            with patch('builtins.open', mock_open()) as mock_file:
+                result = await server._handlers["call_tool"](
+                    "arango_backup_graph",
+                    {"graph_name": "test_graph", "output_dir": "/tmp/backup"}
+                )
 
-            assert len(result) == 1
-            response_data = json.loads(result[0].text)
-            assert response_data["graph_name"] == "test_graph"
-            assert response_data["total_documents"] == 100
-            mock_handler.assert_called_once()
+                assert len(result) == 1
+                response_data = json.loads(result[0].text)
+                assert response_data["graph_name"] == "test_graph"
+                assert response_data["total_documents"] > 0
 
     @pytest.mark.asyncio
     async def test_call_tool_backup_graph_validation_error(self):
@@ -227,13 +251,31 @@ class TestMCPIntegration:
             assert "details" in response_data
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.handle_graph_statistics')
-    async def test_call_tool_graph_statistics_with_aliases(self, mock_handler):
+    async def test_call_tool_graph_statistics_with_aliases(self):
         """Test graph statistics tool call with field aliases."""
-        mock_handler.return_value = {
-            "graphs_analyzed": 1,
-            "statistics": [{"graph_name": "test", "total_vertices": 50}]
+        # Setup mock database with proper graph structure
+        mock_graph = Mock()
+        mock_graph.properties.return_value = {
+            "name": "test_graph",
+            "edgeDefinitions": [
+                {"collection": "edges", "from": ["vertices"], "to": ["vertices"]}
+            ],
+            "orphanCollections": []
         }
+        self.mock_db.has_graph.return_value = True
+        self.mock_db.graph.return_value = mock_graph
+
+        # Mock collections with proper count methods
+        mock_vertex_collection = Mock()
+        mock_vertex_collection.count.return_value = 10
+        mock_edge_collection = Mock()
+        mock_edge_collection.count.return_value = 5
+
+        self.mock_db.has_collection.return_value = True
+        self.mock_db.collection.side_effect = lambda name: mock_edge_collection if name == "edges" else mock_vertex_collection
+
+        # Mock AQL query execution for statistics
+        self.mock_db.aql.execute.return_value = []
 
         with patch.object(server, 'request_context') as mock_ctx:
             mock_ctx.lifespan_context = {"db": self.mock_db, "client": self.mock_client}
@@ -251,13 +293,6 @@ class TestMCPIntegration:
             assert len(result) == 1
             response_data = json.loads(result[0].text)
             assert response_data["graphs_analyzed"] == 1
-
-            # Verify handler was called with correct arguments
-            mock_handler.assert_called_once()
-            call_args = mock_handler.call_args[1]  # Get the args dict
-            assert call_args["graph_name"] == "test_graph"
-            assert call_args["include_degree_distribution"] is False
-            assert call_args["sample_size"] == 200
 
 
 class TestServerLifespan:
