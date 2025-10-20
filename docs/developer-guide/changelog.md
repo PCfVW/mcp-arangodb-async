@@ -15,18 +15,277 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
-1. [Version 0.2.7 (Current)](#version-027---2025-10-19)
-2. [Version 0.2.6](#version-026---2025-10-15)
-3. [Version 0.2.5](#version-025---2025-10-10)
-4. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
-5. [Version 0.1.x](#version-01x---2025-08-01)
-6. [Migration Guides](#migration-guides)
+1. [Version 0.3.1 (Current)](#version-031---2025-10-20)
+2. [Version 0.3.0](#version-030---2025-10-20)
+3. [Version 0.2.11](#version-0211---2025-10-20)
+4. [Version 0.2.10](#version-0210---2025-10-20)
+5. [Version 0.2.9](#version-029---2025-10-20)
+6. [Version 0.2.8](#version-028---2025-10-20)
+7. [Version 0.2.7](#version-027---2025-10-19)
+8. [Version 0.2.6](#version-026---2025-10-15)
+9. [Version 0.2.5](#version-025---2025-10-10)
+10. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
+11. [Version 0.1.x](#version-01x---2025-08-01)
+12. [Migration Guides](#migration-guides)
+
+---
+
+## [0.3.1] - 2025-10-20
+
+**Current Release**
+
+### Added
+
+✅ **Enhanced README Configuration Examples**
+- Updated Claude Desktop configuration with `server` subcommand
+- Improved environment variable examples with secure defaults
+- Changed default credentials from `root/changeme` to `mcp_arangodb_user/mcp_arangodb_password`
+- Better formatting and readability in Quick Start section
+
+### Changed
+
+- README.md formatting improvements with better spacing
+- Enhanced configuration examples for better security practices
+
+### Fixed
+
+- GitHub branch references corrected from `main` to `master` in all absolute URLs
+- Ensures PyPI documentation links work correctly
+
+---
+
+## [0.3.0] - 2025-10-20
+
+### Added
+
+✅ **Comprehensive Pedagogical Documentation (14 files)**
+- Complete documentation overhaul following pedagogical approach (Context→Concept→Code→Conclusion)
+- **Getting Started Guides:**
+  - Installation guide with ArangoDB licensing information
+  - Quick Start guide for stdio transport (Claude Desktop, Augment Code)
+  - First Interaction guide with test prompts and examples
+- **User Guides:**
+  - Complete tools reference (34 tools across 9 categories)
+  - Enhanced troubleshooting guide with common issues and solutions
+- **Configuration Guides:**
+  - Transport configuration (stdio and HTTP)
+  - Complete environment variables reference
+- **Developer Guides:**
+  - Architecture overview with system design
+  - Low-level MCP rationale (why not FastMCP)
+  - HTTP transport implementation guide
+  - This changelog document
+- **Examples:**
+  - Sophisticated codebase dependency analysis example
+  - Graph modeling for software architecture
+  - Dependency analysis and circular detection
+  - Impact analysis and complexity scoring
+- **Navigation:**
+  - Documentation hub (docs/README.md) with learning paths
+  - Style guide for documentation consistency
+
+✅ **Enhanced Root README**
+- Absolute GitHub URLs for PyPI compatibility
+- Quick links section with direct documentation access
+- Comprehensive features overview
+- Installation guides for both PyPI and Docker
+- Quick Start for stdio and HTTP transports
+- Configuration reference with environment variables
+- All 34 tools overview in 9 categories
+- Use case example (Codebase Graph Analysis)
+- Complete documentation links
+- Troubleshooting section
+- License information
+
+### Changed
+
+- Documentation structure completely reorganized for better discoverability
+- All documentation follows pedagogical approach with progressive disclosure
+- README.md optimized to 382 lines with maximum actionability
+- Internal documentation uses relative links for maintainability
+- Root README uses absolute GitHub URLs for PyPI compatibility
+
+### Documentation Structure
+
+```
+docs/
+├── README.md - Navigation hub with learning paths
+├── STYLE_GUIDE.md - Documentation standards
+├── getting-started/
+│   ├── installation.md
+│   ├── quickstart-stdio.md
+│   └── first-interaction.md
+├── user-guide/
+│   ├── tools-reference.md
+│   └── troubleshooting.md
+├── configuration/
+│   ├── transport-configuration.md
+│   └── environment-variables.md
+├── developer-guide/
+│   ├── architecture.md
+│   ├── low-level-mcp-rationale.md
+│   ├── http-transport.md
+│   └── changelog.md
+└── examples/
+    └── codebase-analysis.md
+```
+
+**Total Documentation:** ~2,679 lines across 14 files
+
+---
+
+## [0.2.11] - 2025-10-20
+
+### Added
+
+✅ **Phase 4: Polish & Examples**
+- **Sophisticated Codebase Analysis Example:**
+  - Complete graph modeling example for software dependency analysis
+  - Problem statement addressing traditional tools limitations
+  - Graph model design with 3 vertex collections and 3 edge collections
+  - Step-by-step implementation guide with Claude prompts
+  - 5 analysis queries: direct dependencies, transitive dependencies, reverse dependencies, circular detection, leaf modules
+  - 3 advanced use cases: dependency depth analysis, call chain analysis, complexity scoring
+  - Real-world AQL query examples with expected results
+  - Pedagogical approach (Context→Concept→Code→Conclusion)
+
+### Changed
+
+- **README.md Enhanced:**
+  - Added link to codebase-analysis.md example
+  - Added "Examples" section to documentation links
+  - Optimized to 382 lines (within 400-500 target)
+  - All 30 absolute GitHub URLs verified for PyPI compatibility
+- **docs/README.md Updated:**
+  - Added "Examples" section with codebase-analysis.md
+  - Updated Learning Path 1 to include example
+  - Cross-references validated, relative links maintained
+
+### Documentation Review
+
+✅ Grammar and formatting validated across all Phase 1-4 files
+✅ Cross-references validated (absolute URLs in README.md, relative in docs/)
+✅ Link validation completed (30 absolute GitHub URLs, all relative links)
+✅ Consistency check passed across all documentation
+
+**Phase 4 Complete:** All deliverables match PEDAGOGICAL_DOCUMENTATION_ROADMAP.md specifications
+
+---
+
+## [0.2.10] - 2025-10-20
+
+### Added
+
+✅ **Phases 1-3 Comprehensive Documentation (8 files)**
+- **Phase 1 - Foundation:**
+  - Enhanced README.md (379 lines) with absolute GitHub URLs for PyPI compatibility
+  - Quick links, features overview, architecture diagram
+  - Installation guides for stdio and HTTP transports
+  - Configuration reference, tools overview, troubleshooting
+- **Phase 2 - Architecture & Rationale (4 files):**
+  - Low-level MCP rationale (300 lines) - Why not FastMCP
+  - Environment variables reference (300 lines) - Complete configuration guide
+  - Troubleshooting guide (300 lines) - Common issues and solutions
+  - Architecture overview (300 lines) - System design with 7-layer diagram
+- **Phase 3 - Advanced Features & History (3 files):**
+  - HTTP transport guide (300 lines) - Starlette integration, deployment
+  - Changelog (300 lines) - Version history and migration guides
+  - Documentation hub (300 lines) - Navigation with learning paths
+
+### Changed
+
+- Documentation structure completely reorganized for better discoverability
+- All documentation follows pedagogical approach (Context→Concept→Code→Conclusion)
+- Internal documentation uses relative links for maintainability
+- Root README uses absolute GitHub URLs for PyPI compatibility
+
+### Removed
+
+- Deleted 5 incorrect files that deviated from roadmap:
+  - docs/architecture/design-decisions.md
+  - docs/architecture/transport-comparison.md
+  - docs/developer-guide/contributing.md
+  - docs/developer-guide/testing.md
+  - docs/developer-guide/extending-tools.md
+
+**Phases 1-3 Complete:** 8/8 deliverables (1 + 4 + 3 files)
+
+---
+
+## [0.2.9] - 2025-10-20
+
+### Added
+
+✅ **Phase 2: Architecture and Configuration Documentation (3 files)**
+- **Design Decisions Documentation (731 lines):**
+  - Low-level MCP Server API rationale vs FastMCP
+  - Docker rationale with persistent data configuration
+  - Retry/reconnect logic with graceful degradation
+  - Tool registration pattern evolution (if-elif → decorator)
+  - Centralized error handling strategy
+- **Transport Comparison Guide (614 lines):**
+  - stdio vs HTTP transport comparison with architecture diagrams
+  - Technical comparison tables (protocol, deployment, scalability, security)
+  - 4 real-world use case recommendations
+  - Performance benchmarks (stdio: 0.8ms, HTTP: 2.3ms latency)
+  - Security implications and best practices
+  - Migration guide (stdio ↔ HTTP)
+- **Transport Configuration Guide (732 lines):**
+  - Complete stdio transport configuration (Claude Desktop, Augment Code)
+  - HTTP transport configuration (Docker, Kubernetes)
+  - Environment variables reference with examples
+  - Client-specific integration guides (JavaScript, Python)
+  - Troubleshooting guide for common transport issues
+
+### Documentation Features
+
+- Pedagogical-first approach (Context→Concept→Code→Conclusion)
+- Production-ready examples (Docker Compose, Kubernetes deployments)
+- Security best practices (TLS, CORS, authentication, firewall)
+- Real-world use cases (local dev, web apps, K8s, CI/CD)
+- Comprehensive troubleshooting sections
+
+**Phase 2 Complete:** 3/3 deliverables
+
+---
+
+## [0.2.8] - 2025-10-20
+
+### Added
+
+✅ **Phase 1: Foundation Documentation (4 files)**
+- **Quick Start Guide (300 lines):**
+  - Complete stdio quickstart with step-by-step instructions
+  - MCP client configuration for Claude Desktop and Augment Code
+  - Health check verification and troubleshooting
+- **First Interaction Guide (300 lines):**
+  - Basic verification tests for server connectivity
+  - 5 AI-Coding use cases adapted to software engineering workflows
+  - Advanced tests for bulk operations and indexing
+- **Installation Guide (300 lines):**
+  - Complete installation guide with Docker setup
+  - ArangoDB 3.11 licensing details (Apache 2.0 vs BUSL-1.1)
+  - Database initialization and environment configuration
+  - Comprehensive troubleshooting section
+- **Tools Reference (994 lines):**
+  - Complete documentation for all 34 MCP tools
+  - Organized into 9 categories with examples
+  - Parameters, return values, use cases, and best practices
+  - Toolset configuration guide (baseline vs full)
+
+### Documentation Features
+
+- Pedagogical-first approach (teaches, not just informs)
+- AI-Coding context examples (codebase analysis, API evolution, etc.)
+- Progressive complexity (beginner → intermediate → advanced)
+- Style guide compliant (relative links, proper formatting)
+- Actionable content (users can immediately apply knowledge)
+
+**Phase 1 Complete:** 4/5 deliverables (README.md transformation pending)
 
 ---
 
 ## [0.2.7] - 2025-10-19
-
-**Current Release**
 
 ### Added
 
