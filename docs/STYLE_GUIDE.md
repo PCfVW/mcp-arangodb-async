@@ -664,9 +664,9 @@ docker compose up -d
 **Absolute URL Format:**
 ```markdown
 ✅ CORRECT (works on both GitHub and PyPI):
-[Transport Configuration](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/configuration/transport-configuration.md)
+[Transport Configuration](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/configuration/transport-configuration.md)
 
-[Installation Guide](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/getting-started/installation.md)
+[Installation Guide](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/getting-started/installation.md)
 
 ❌ WRONG (broken on PyPI):
 [Transport Configuration](docs/configuration/transport-configuration.md)
@@ -680,28 +680,28 @@ https://github.com/[username]/[repo]/blob/[branch]/[path-to-file]
 
 **For This Project:**
 ```
-https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/[subdirectory]/[filename].md
+https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/[subdirectory]/[filename].md
 ```
 
 **Examples:**
 ```markdown
 # Getting Started Links
-[Installation Guide](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/getting-started/installation.md)
-[Quickstart (stdio)](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/getting-started/quickstart-stdio.md)
+[Installation Guide](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/getting-started/installation.md)
+[Quickstart (stdio)](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/getting-started/quickstart-stdio.md)
 
 # Configuration Links
-[Transport Configuration](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/configuration/transport-configuration.md)
-[Environment Variables](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/configuration/environment-variables.md)
+[Transport Configuration](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/configuration/transport-configuration.md)
+[Environment Variables](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/configuration/environment-variables.md)
 
 # User Guide Links
-[Tools Reference](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/user-guide/tools-reference.md)
-[Troubleshooting](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/user-guide/troubleshooting.md)
+[Tools Reference](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/user-guide/tools-reference.md)
+[Troubleshooting](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/user-guide/troubleshooting.md)
 ```
 
 **Image Links (if any):**
 ```markdown
 ✅ CORRECT:
-![Architecture Diagram](https://raw.githubusercontent.com/PCfVW/mcp-arangodb-async/main/docs/images/architecture.png)
+![Architecture Diagram](https://raw.githubusercontent.com/PCfVW/mcp-arangodb-async/master/docs/images/architecture.png)
 
 ❌ WRONG:
 ![Architecture Diagram](docs/images/architecture.png)
@@ -983,7 +983,7 @@ FOR v, e, p IN 2..10 OUTBOUND 'modules/auth'
 **PyPI Compatibility (Root README.md only):**
 - [ ] All documentation links use absolute GitHub URLs
 - [ ] All image links (if any) use absolute GitHub URLs
-- [ ] URL format: `https://github.com/PCfVW/mcp-arangodb-async/blob/main/...`
+- [ ] URL format: `https://github.com/PCfVW/mcp-arangodb-async/blob/master/...`
 - [ ] No relative paths in root README.md
 
 **AI-Coding Context:**
@@ -1099,14 +1099,14 @@ python -m mcp_arangodb_async --health
 ```
 ✅ **Good (works on PyPI):**
 ```markdown
-[Installation Guide](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/getting-started/installation.md)
+[Installation Guide](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/getting-started/installation.md)
 ```
 
 ### Mistake 12: Absolute Links in docs/ Files
 ❌ **Bad (hard to maintain):**
 ```markdown
 # In docs/getting-started/installation.md
-[Transport Configuration](https://github.com/PCfVW/mcp-arangodb-async/blob/main/docs/configuration/transport-configuration.md)
+[Transport Configuration](https://github.com/PCfVW/mcp-arangodb-async/blob/master/docs/configuration/transport-configuration.md)
 ```
 ✅ **Good (maintainable):**
 ```markdown

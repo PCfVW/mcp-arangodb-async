@@ -233,8 +233,8 @@ FastMCP uses decorators for routing, which is fine for small servers but doesn't
 
 ### 4. Extensive Test Suite Compatibility ⭐
 
-**The Challenge:**  
-We have 100+ tests that directly access `server.request_context` and `server._handlers`.
+**The Challenge:**
+We have 230+ tests that directly access `server.request_context` and `server._handlers`.
 
 **Our Solution:**
 ```python
@@ -254,8 +254,8 @@ def _safe_get_request_context(self):
 setattr(Server, "request_context", property(_safe_get_request_context, ...))
 ```
 
-**Why This Matters:**  
-Migrating to FastMCP would require rewriting 100+ tests. The low-level API preserves our existing test infrastructure.
+**Why This Matters:**
+Migrating to FastMCP would require rewriting 230+ tests. The low-level API preserves our existing test infrastructure.
 
 ---
 
@@ -344,7 +344,7 @@ By using the low-level Server API, we achieve:
 
 1. **Full Control** - Complete flexibility over server lifecycle
 2. **Advanced Features** - Retry logic, lazy reconnection, runtime state modification
-3. **Test Compatibility** - Preserve 100+ existing tests
+3. **Test Compatibility** - Preserve 230+ existing tests
 4. **Centralized Logic** - Single point for cross-cutting concerns
 5. **Scalability** - O(1) tool dispatch for 34+ tools
 
@@ -357,7 +357,7 @@ The low-level MCP Server API is the right choice for mcp-arangodb-async because:
 - ✅ We need complex startup logic with retry/reconnect
 - ✅ We need runtime state modification for lazy connection recovery
 - ✅ We have 34+ tools requiring centralized routing
-- ✅ We have 100+ tests that depend on low-level API
+- ✅ We have 230+ tests that depend on low-level API
 - ✅ We need custom error handling across all tools
 
 FastMCP is excellent for simple servers, but our requirements demand the flexibility and control of the low-level API.

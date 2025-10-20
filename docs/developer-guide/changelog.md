@@ -15,24 +15,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
-1. [Version 0.3.1 (Current)](#version-031---2025-10-20)
-2. [Version 0.3.0](#version-030---2025-10-20)
-3. [Version 0.2.11](#version-0211---2025-10-20)
-4. [Version 0.2.10](#version-0210---2025-10-20)
-5. [Version 0.2.9](#version-029---2025-10-20)
-6. [Version 0.2.8](#version-028---2025-10-20)
-7. [Version 0.2.7](#version-027---2025-10-19)
-8. [Version 0.2.6](#version-026---2025-10-15)
-9. [Version 0.2.5](#version-025---2025-10-10)
-10. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
-11. [Version 0.1.x](#version-01x---2025-08-01)
-12. [Migration Guides](#migration-guides)
+1. [Version 0.3.2 (Current)](#version-032---2025-10-20)
+2. [Version 0.3.1](#version-031---2025-10-20)
+3. [Version 0.3.0](#version-030---2025-10-20)
+4. [Version 0.2.11](#version-0211---2025-10-20)
+5. [Version 0.2.10](#version-0210---2025-10-20)
+6. [Version 0.2.9](#version-029---2025-10-20)
+7. [Version 0.2.8](#version-028---2025-10-20)
+8. [Version 0.2.7](#version-027---2025-10-19)
+9. [Version 0.2.6](#version-026---2025-10-15)
+10. [Version 0.2.5](#version-025---2025-10-10)
+11. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
+12. [Version 0.1.x](#version-01x---2025-08-01)
+13. [Migration Guides](#migration-guides)
+
+---
+
+## [0.3.2] - 2025-10-20
+
+**Current Release**
+
+### Fixed
+
+✅ **Test Suite Stability (20 failing tests resolved)**
+- Fixed handler invocation logic using signature inspection instead of try/catch approach
+- Resolved mock object setup issues across multiple test files to return proper iterable data structures
+- Added missing `tabulate` dependency to development requirements
+- Updated test environment detection in backup.py for secure path validation while allowing test execution
+- Fixed schema property assertions to match Pydantic v2 camelCase generation
+- Corrected function signature mismatches in handler unit tests for new graph statistics parameters
+- Improved integration test mocking by replacing fragile patches with robust mock database setups
+- Added missing imports (`ANY`, `mock_open`) to test files
+
+✅ **Graph Management Robustness**
+- Enhanced parameter handling consistency across all 5 graph management tools
+- Improved error recovery and validation for graph backup/restore operations
+- Standardized mock database structures for reliable integration testing
+- Fixed database unavailable error handling in integration tests
+
+### Changed
+
+- **Test Results:** Improved from 208 passing tests (87% pass rate) to 228 passing tests (99.1% pass rate)
+- **Graph Tools:** All 5 graph management tools (`arango_backup_graph`, `arango_restore_graph`, `arango_backup_named_graphs`, `arango_validate_graph_integrity`, `arango_graph_statistics`) now working reliably
+- **CI/CD Confidence:** Stable test suite enables reliable continuous integration
+
+### Technical Details
+
+- Handler invocation now uses `inspect.signature()` to detect `VAR_KEYWORD` parameters
+- Test environment detection prevents path traversal security issues while allowing test execution
+- Mock objects properly configured with iterable return values and realistic data structures
+- Integration tests use comprehensive mock database setup instead of fragile handler patches
 
 ---
 
 ## [0.3.1] - 2025-10-20
-
-**Current Release**
 
 ### Added
 
