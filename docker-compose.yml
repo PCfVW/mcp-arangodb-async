@@ -12,3 +12,28 @@ services:
       timeout: 2s
       retries: 30
     restart: unless-stopped
+    networks:
+      - mcp-network
+
+  mcp-arangodb-async:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp_server
+    environment:
+      ARANGO_URL: http://arangodb:8529
+      ARANGO_DB: ${ARANGO_DB:-_system}
+      ARANGO_USERNAME: ${ARANGO_USERNAME:-root}
+      ARANGO_PASSWORD: ${ARANGO_ROOT_PASSWORD:-changeme}
+    depends_on:
+      arangodb:
+        condition: service_healthy
+    stdin_open: true  # Enable stdin for stdio transport
+    tty: true         # Allocate pseudo-TTY
+    networks:
+      - mcp-network
+    restart: unless-stopped
+
+networks:
+  mcp-network:
+    driver: bridge
