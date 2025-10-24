@@ -1,4 +1,17 @@
+# Docker Compose configuration for mcp-arangodb-async
+#
+# PROFILES:
+# - stdio (default): For desktop clients (Claude Desktop, Augment Code)
+#   Usage: docker compose up -d
+#
+# - http: For web clients, remote access, testing HTTP transport
+#   Usage: docker compose --profile http up -d
+#
+# - both: Run both stdio and HTTP servers simultaneously (for testing)
+#   Usage: docker compose --profile stdio --profile http up -d
+
 services:
+  # ArangoDB Database (shared by all profiles)
   arangodb:
     image: arangodb:3.11
     container_name: mcp_arangodb_test
@@ -15,21 +28,62 @@ services:
     networks:
       - mcp-network
 
-  mcp-arangodb-async:
+  # MCP Server - stdio transport (DEFAULT PROFILE)
+  # For desktop clients: Claude Desktop, Augment Code
+  mcp-server-stdio:
+    profiles:
+      - stdio
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: mcp_server
+    container_name: mcp_server_stdio
     environment:
       ARANGO_URL: http://arangodb:8529
       ARANGO_DB: ${ARANGO_DB:-_system}
       ARANGO_USERNAME: ${ARANGO_USERNAME:-root}
       ARANGO_PASSWORD: ${ARANGO_PASSWORD:-changeme}
+      MCP_TRANSPORT: stdio
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       arangodb:
         condition: service_healthy
     stdin_open: true  # Enable stdin for stdio transport
     tty: true         # Allocate pseudo-TTY
+    networks:
+      - mcp-network
+    restart: unless-stopped
+
+  # MCP Server - HTTP transport (HTTP PROFILE)
+  # For web clients, remote access, HTTP testing
+  mcp-server-http:
+    profiles:
+      - http
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp_server_http
+    environment:
+      ARANGO_URL: http://arangodb:8529
+      ARANGO_DB: ${ARANGO_DB:-_system}
+      ARANGO_USERNAME: ${ARANGO_USERNAME:-root}
+      ARANGO_PASSWORD: ${ARANGO_PASSWORD:-changeme}
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 8000
+      MCP_HTTP_STATELESS: ${MCP_HTTP_STATELESS:-false}
+      MCP_HTTP_CORS_ORIGINS: ${MCP_HTTP_CORS_ORIGINS:-*}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8000:8000"
+    depends_on:
+      arangodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - mcp-network
     restart: unless-stopped
