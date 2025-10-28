@@ -143,6 +143,47 @@ python -c "import arango; print(arango.__version__)"
 
 ---
 
+### Alternative: Docker Installation
+
+Instead of installing Python dependencies locally, build the MCP server Docker image for environment isolation and reproducibility.
+
+#### Build the Docker Image
+
+```powershell
+docker build -t mcp-arangodb-async:latest .
+```
+
+**What This Does:**
+- Uses multi-stage build to minimize image size (~200MB final image)
+- Installs all Python dependencies in isolated environment
+- Creates non-root user for security
+- Configures health checks for container monitoring
+
+**Verify Build:**
+```powershell
+docker images mcp-arangodb-async
+
+# Expected output:
+# REPOSITORY              TAG       IMAGE ID       CREATED         SIZE
+# mcp-arangodb-async      latest    abc123def456   2 minutes ago   ~200MB
+```
+
+#### Deployment Options
+
+The Docker image supports 4 deployment modes via docker-compose profiles:
+
+| Profile | Transport | Use Case | Command |
+|---------|-----------|----------|---------|
+| **stdio** | stdio | Desktop clients (Claude, Augment) | `docker compose --profile stdio up -d` |
+| **http** | HTTP | Web clients, remote access | `docker compose --profile http up -d` |
+| *(none)* | - | ArangoDB only | `docker compose up -d` |
+
+**Usage Guides:**
+- **stdio + Docker:** [Quickstart Guide - Docker Container](./quickstart-stdio.md#alternative-using-docker-container)
+- **HTTP + Docker:** [Transport Configuration - HTTP with Docker](../configuration/transport-configuration.md#http-transport-with-docker)
+
+---
+
 ### Step 3: Start ArangoDB Container
 
 #### 3.1 Review docker-compose.yml

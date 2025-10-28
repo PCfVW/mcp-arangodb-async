@@ -92,6 +92,95 @@ mcp_arangodb_test    Up (healthy)        0.0.0.0:8529->8529/tcp
 
 ---
 
+## Alternative: Using Docker Container
+
+Instead of installing Python locally, run the MCP server in Docker for environment isolation.
+
+**Note:** MCP hosts like Claude Desktop must control the container lifecycle to maintain stdio communication. There is probably no benefit to start the MCP server with stdio in Docker by yourself, except for testing the deployment itself.
+
+### Option A: docker-compose stdio Profile (Recommended)
+
+**Build the Docker Image:**
+```powershell
+docker build -t mcp-arangodb-async:latest .
+```
+
+**Start the stdio Server:**
+```powershell
+# Start stdio server
+docker compose --profile stdio up -d
+
+# Verify container is running
+docker compose ps
+
+# Expected output:
+# NAME                 STATUS              PORTS
+# mcp_server_stdio     Up                  -
+```
+
+**Configure Claude Desktop:**
+
+Edit `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/Claude/claude_desktop_config.json` (macOS/Linux):
+
+```json
+{
+  "mcpServers": {
+    "mcp_arangodb_async": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--name", "mcp_arangodb_async-stdio",
+        "-e", "ARANGO_URL=http://host.docker.internal:8529",
+        "-e", "ARANGO_DB=mcp_arangodb_test",
+        "-e", "ARANGO_USERNAME=mcp_arangodb_user",
+        "-e", "ARANGO_PASSWORD=mcp_arangodb_password",
+        "mcp-arangodb-async:latest"
+      ]
+    }
+  }
+}
+```
+
+**What This Does:**
+- Claude Desktop runs `docker run` with environment variables injected via `-e` flags
+- Uses `host.docker.internal` to access ArangoDB running on the host machine
+- The `--rm` flag removes the container when Claude Desktop stops
+
+**Alternative Configuration with Environment File:**
+
+Create `.env-docker-stdio` in your project directory:
+
+```dotenv
+ARANGO_URL=http://host.docker.internal:8529
+ARANGO_DB=mcp_arangodb_test
+ARANGO_USERNAME=mcp_arangodb_user
+ARANGO_PASSWORD=mcp_arangodb_password
+```
+
+Then use:
+
+```json
+{
+  "mcpServers": {
+    "mcp_arangodb_async": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--name", "mcp_arangodb_async-stdio",
+        "--env-file", "path/to/.env-docker-stdio",
+        "mcp-arangodb-async:latest"
+      ]
+    }
+  }
+}
+```
+
+📖 **Environment Variables:** See [Environment Variables Guide](../configuration/environment-variables.md) for complete configuration options.
+
+**Skip to Step 5** if using Docker (Steps 3-4 are for Python installation only).
+
+---
+
 ## Step 3: Initialize Database
 
 ### 3.1 Run Setup Script
@@ -150,6 +239,8 @@ MCP_COMPAT_TOOLSET=full
 - `MCP_TRANSPORT=stdio` - Use stdio transport (default for desktop clients)
 - `MCP_COMPAT_TOOLSET=full` - Enable all 34 tools (default)
 
+📖 **Environment Variables:** See [Environment Variables Guide](../configuration/environment-variables.md) for complete configuration options and alternative setup methods.
+
 ---
 
 ## Step 5: Verify Installation
@@ -184,7 +275,7 @@ python -m mcp_arangodb_async --health
 ```json
 {
   "mcpServers": {
-    "arangodb": {
+    "mcp_arangodb_async": {
       "command": "python",
       "args": ["-m", "mcp_arangodb_async"],
       "env": {

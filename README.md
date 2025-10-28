@@ -25,13 +25,14 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 
 ## Features
 
-✅ **34 MCP Tools** - Complete ArangoDB operations (queries, collections, indexes, graphs)  
-✅ **Graph Management** - Create, traverse, backup/restore named graphs  
-✅ **Content Conversion** - JSON, Markdown, YAML, and Table formats  
-✅ **Backup/Restore** - Collection and graph-level backup with validation  
-✅ **Analytics** - Query profiling, explain plans, graph statistics  
-✅ **Dual Transport** - stdio (desktop clients) and HTTP (web/containerized)  
-✅ **Production-Ready** - Retry logic, graceful degradation, comprehensive error handling  
+✅ **34 MCP Tools** - Complete ArangoDB operations (queries, collections, indexes, graphs)
+✅ **Graph Management** - Create, traverse, backup/restore named graphs
+✅ **Content Conversion** - JSON, Markdown, YAML, and Table formats
+✅ **Backup/Restore** - Collection and graph-level backup with validation
+✅ **Analytics** - Query profiling, explain plans, graph statistics
+✅ **Dual Transport** - stdio (desktop clients) and HTTP (web/containerized)
+✅ **Docker Support** - Run in Docker for isolation and reproducibility
+✅ **Production-Ready** - Retry logic, graceful degradation, comprehensive error handling
 ✅ **Type-Safe** - Pydantic validation for all tool arguments
 
 ---
@@ -115,6 +116,41 @@ Edit `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/Claud
 Ask Claude: *"List all collections in the ArangoDB database"*
 
 📖 **Full stdio quickstart:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/getting-started/quickstart-stdio.md)
+
+---
+
+### Docker Container (Alternative)
+
+**1. Build the Docker image:**
+
+```bash
+docker build -t mcp-arangodb-async:latest .
+```
+
+**2. Configure Claude Desktop:**
+
+Edit `%APPDATA%\Claude\claude_desktop_config.json` (Windows) or `~/.config/Claude/claude_desktop_config.json` (macOS/Linux):
+
+```json
+{
+  "mcpServers": {
+    "arangodb": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "mcp-arangodb-async:latest"],
+      "env": {
+        "ARANGO_URL": "http://host.docker.internal:8529",
+        "ARANGO_DB": "mcp_arangodb_test",
+        "ARANGO_USERNAME": "mcp_arangodb_user",
+        "ARANGO_PASSWORD": "mcp_arangodb_password"
+      }
+    }
+  }
+}
+```
+
+**3. Restart Claude Desktop**
+
+📖 **Transport configuration guide:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/configuration/transport-configuration.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/configuration/transport-configuration.md)
 
 ---
 

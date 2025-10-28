@@ -207,6 +207,36 @@ asyncio.run(run_mcp_client())
 
 ---
 
+### Using Docker Container
+
+Run the MCP server in Docker for environment isolation.
+
+**Note:** MCP hosts like Claude Desktop must control the container lifecycle to maintain stdio communication.
+
+**Claude Desktop Configuration:**
+```json
+{
+  "mcpServers": {
+    "mcp_arangodb_async": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--name", "mcp_arangodb_async-stdio",
+        "-e", "ARANGO_URL=http://host.docker.internal:8529",
+        "-e", "ARANGO_DB=mcp_arangodb_test",
+        "-e", "ARANGO_USERNAME=mcp_arangodb_user",
+        "-e", "ARANGO_PASSWORD=mcp_arangodb_password",
+        "mcp-arangodb-async:latest"
+      ]
+    }
+  }
+}
+```
+
+📖 **Complete Docker guide:** [Quickstart (stdio) - Docker Container](../getting-started/quickstart-stdio.md#alternative-using-docker-container)
+
+---
+
 ### Verification
 
 **Test stdio Transport:**
@@ -297,6 +327,64 @@ python -m mcp_arangodb_async `
   --port 8000 `
   --stateless
 ```
+
+---
+
+### Using Docker Container
+
+Run the MCP server in Docker for isolation and reproducibility.
+
+**Start HTTP Server:**
+```powershell
+# Start ArangoDB + MCP HTTP server
+docker compose --profile http up -d
+
+# Verify health endpoint
+curl http://localhost:8000/health
+```
+
+**Using Environment File:**
+
+Create `.env` file in project root:
+```dotenv
+ARANGO_URL=http://localhost:8529
+ARANGO_DB=mcp_arangodb_test
+ARANGO_USERNAME=mcp_arangodb_user
+ARANGO_PASSWORD=mcp_arangodb_password
+MCP_HTTP_HOST=0.0.0.0
+MCP_HTTP_PORT=8000
+```
+
+Then start with:
+```powershell
+docker compose --profile http --env-file .env up -d
+```
+
+**Client Configuration:**
+
+**LM Studio:**
+```json
+{
+  "mcpServers": {
+    "mcp_arangodb_async": {
+      "url": "http://localhost:8000/mcp"
+    }
+  }
+}
+```
+
+**Gemini CLI:**
+```json
+{
+  "mcpServers": {
+    "mcp_arangodb_async": {
+      "httpUrl": "http://localhost:8000/mcp"
+    }
+  }
+}
+```
+
+**Environment Configuration:** You can configure environment variables using inline `env` objects in MCP host configs, `-e` flags in Docker commands, or `--env-file` with environment files. See [Environment Variables Guide](environment-variables.md) for complete options.
 
 ---
 

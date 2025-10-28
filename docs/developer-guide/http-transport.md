@@ -709,10 +709,37 @@ curl http://localhost:8000/health
 
 ---
 
+## Client Configuration Examples
+
+### LM Studio
+
+```json
+{
+  "mcpServers": {
+    "mcp_arangodb_async": {
+      "url": "http://localhost:8000/mcp"
+    }
+  }
+}
+```
+
+### Gemini CLI
+
+```json
+{
+  "mcpServers": {
+    "mcp_arangodb_async": {
+      "httpUrl": "http://localhost:8000/mcp"
+    }
+  }
+}
+```
+
+---
+
 ## Related Documentation
 
 - [Architecture Overview](architecture.md)
 - [Transport Configuration](../configuration/transport-configuration.md)
 - [Environment Variables](../configuration/environment-variables.md)
 - [Low-Level MCP Rationale](low-level-mcp-rationale.md)
-
