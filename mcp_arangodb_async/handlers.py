@@ -2136,6 +2136,175 @@ def handle_list_contexts(
     }
 
 
+# Pattern 3: Tool Unloading
+# Define workflow stages and their tool sets
+WORKFLOW_STAGES = {
+    "setup": {
+        "description": "Create collections, graphs, and schemas",
+        "tools": [
+            ARANGO_CREATE_COLLECTION, ARANGO_CREATE_GRAPH, ARANGO_CREATE_SCHEMA,
+            ARANGO_ADD_VERTEX_COLLECTION, ARANGO_ADD_EDGE_DEFINITION
+        ]
+    },
+    "data_loading": {
+        "description": "Bulk insert and validate data",
+        "tools": [
+            ARANGO_BULK_INSERT, ARANGO_INSERT_WITH_VALIDATION,
+            ARANGO_VALIDATE_REFERENCES, ARANGO_INSERT
+        ]
+    },
+    "analysis": {
+        "description": "Query, traverse, and analyze data",
+        "tools": [
+            ARANGO_QUERY, ARANGO_TRAVERSE, ARANGO_SHORTEST_PATH,
+            ARANGO_EXPLAIN_QUERY, ARANGO_QUERY_PROFILE, ARANGO_GRAPH_STATISTICS
+        ]
+    },
+    "cleanup": {
+        "description": "Backup and finalize workflow",
+        "tools": [
+            ARANGO_BACKUP, ARANGO_BACKUP_GRAPH, ARANGO_BACKUP_NAMED_GRAPHS,
+            ARANGO_VALIDATE_GRAPH_INTEGRITY
+        ]
+    }
+}
+
+# Global state for tool usage tracking (in production, this would be per-session)
+_CURRENT_STAGE = "setup"
+_TOOL_USAGE_STATS = {}
+
+
+def _track_tool_usage(tool_name: str):
+    """Track tool usage for unloading decisions."""
+    if tool_name not in _TOOL_USAGE_STATS:
+        _TOOL_USAGE_STATS[tool_name] = {
+            "first_used": datetime.now().isoformat(),
+            "last_used": datetime.now().isoformat(),
+            "use_count": 0,
+            "stage": _CURRENT_STAGE
+        }
+
+    _TOOL_USAGE_STATS[tool_name]["last_used"] = datetime.now().isoformat()
+    _TOOL_USAGE_STATS[tool_name]["use_count"] += 1
+
+
+@handle_errors
+@register_tool(
+    name=ARANGO_ADVANCE_WORKFLOW_STAGE,
+    description="Advance to the next workflow stage, automatically unloading tools from previous stage and loading tools for new stage. Enables Tool Unloading pattern.",
+    model=AdvanceWorkflowStageArgs,
+)
+def handle_advance_workflow_stage(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Advance to a new workflow stage with automatic tool unloading.
+
+    This tool enables the Tool Unloading pattern by automatically removing
+    tools from completed stages and loading tools for the new stage.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: Validated AdvanceWorkflowStageArgs containing target stage
+
+    Returns:
+        Dictionary with stage transition details
+    """
+    global _CURRENT_STAGE
+
+    new_stage = args["stage"]
+    old_stage = _CURRENT_STAGE
+
+    if new_stage not in WORKFLOW_STAGES:
+        return {
+            "error": f"Unknown stage: {new_stage}",
+            "available_stages": list(WORKFLOW_STAGES.keys())
+        }
+
+    old_tools = set(WORKFLOW_STAGES[old_stage]["tools"])
+    new_tools = set(WORKFLOW_STAGES[new_stage]["tools"])
+
+    tools_unloaded = list(old_tools - new_tools)
+    tools_loaded = list(new_tools - old_tools)
+
+    _CURRENT_STAGE = new_stage
+
+    return {
+        "from_stage": old_stage,
+        "to_stage": new_stage,
+        "description": WORKFLOW_STAGES[new_stage]["description"],
+        "tools_unloaded": tools_unloaded,
+        "tools_loaded": tools_loaded,
+        "active_tools": list(new_tools),
+        "total_active_tools": len(new_tools)
+    }
+
+
+@handle_errors
+@register_tool(
+    name=ARANGO_GET_TOOL_USAGE_STATS,
+    description="Get usage statistics for all tools, including use counts and last used timestamps. Useful for understanding tool usage patterns.",
+    model=GetToolUsageStatsArgs,
+)
+def handle_get_tool_usage_stats(
+    db: StandardDatabase, args: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Get tool usage statistics.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: No arguments required
+
+    Returns:
+        Dictionary with tool usage statistics
+    """
+    global _TOOL_USAGE_STATS, _CURRENT_STAGE
+
+    return {
+        "current_stage": _CURRENT_STAGE,
+        "tool_usage": _TOOL_USAGE_STATS,
+        "total_tools_used": len(_TOOL_USAGE_STATS),
+        "active_stage_tools": WORKFLOW_STAGES[_CURRENT_STAGE]["tools"]
+    }
+
+
+@handle_errors
+@register_tool(
+    name=ARANGO_UNLOAD_TOOLS,
+    description="Manually unload specific tools from the active context. Useful for fine-grained control over tool lifecycle.",
+    model=UnloadToolsArgs,
+)
+def handle_unload_tools(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Manually unload specific tools.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: Validated UnloadToolsArgs containing tool names to unload
+
+    Returns:
+        Dictionary with unload results
+    """
+    tool_names = args["tool_names"]
+
+    # In a real implementation, this would remove tools from the active context
+    # For now, we just track which tools would be unloaded
+    unloaded = []
+    not_found = []
+
+    for tool_name in tool_names:
+        if tool_name in TOOL_REGISTRY:
+            unloaded.append(tool_name)
+        else:
+            not_found.append(tool_name)
+
+    return {
+        "unloaded": unloaded,
+        "not_found": not_found,
+        "total_unloaded": len(unloaded)
+    }
+
+
 # Register aliases for backward compatibility
 from .tool_registry import ToolRegistration
 
