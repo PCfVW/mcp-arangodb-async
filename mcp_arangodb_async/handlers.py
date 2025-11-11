@@ -1966,6 +1966,176 @@ def handle_list_tools_by_category(
         return result
 
 
+# Pattern 2: Context Switching
+# Define workflow contexts
+WORKFLOW_CONTEXTS = {
+    "baseline": {
+        "description": "Minimal CRUD operations for basic database interaction",
+        "tools": [
+            ARANGO_QUERY, ARANGO_LIST_COLLECTIONS, ARANGO_INSERT,
+            ARANGO_UPDATE, ARANGO_REMOVE, ARANGO_CREATE_COLLECTION, ARANGO_BACKUP
+        ]
+    },
+    "data_analysis": {
+        "description": "Query optimization and performance analysis",
+        "tools": [
+            ARANGO_QUERY, ARANGO_LIST_COLLECTIONS, ARANGO_EXPLAIN_QUERY,
+            ARANGO_QUERY_BUILDER, ARANGO_QUERY_PROFILE, ARANGO_LIST_INDEXES,
+            ARANGO_DATABASE_STATUS
+        ]
+    },
+    "graph_modeling": {
+        "description": "Graph creation, traversal, and analysis",
+        "tools": [
+            ARANGO_CREATE_GRAPH, ARANGO_LIST_GRAPHS, ARANGO_ADD_VERTEX_COLLECTION,
+            ARANGO_ADD_EDGE_DEFINITION, ARANGO_ADD_EDGE, ARANGO_TRAVERSE,
+            ARANGO_SHORTEST_PATH, ARANGO_GRAPH_STATISTICS,
+            ARANGO_VALIDATE_GRAPH_INTEGRITY, ARANGO_QUERY
+        ]
+    },
+    "bulk_operations": {
+        "description": "Batch processing and bulk data operations",
+        "tools": [
+            ARANGO_BULK_INSERT, ARANGO_BULK_UPDATE, ARANGO_INSERT_WITH_VALIDATION,
+            ARANGO_VALIDATE_REFERENCES, ARANGO_LIST_COLLECTIONS, ARANGO_QUERY
+        ]
+    },
+    "schema_validation": {
+        "description": "Data integrity and schema management",
+        "tools": [
+            ARANGO_CREATE_SCHEMA, ARANGO_VALIDATE_DOCUMENT,
+            ARANGO_INSERT_WITH_VALIDATION, ARANGO_VALIDATE_REFERENCES,
+            ARANGO_VALIDATE_GRAPH_INTEGRITY, ARANGO_QUERY
+        ]
+    },
+    "full": {
+        "description": "All available tools (fallback for complex workflows)",
+        "tools": list(TOOL_REGISTRY.keys())
+    }
+}
+
+# Global state for active context (in production, this would be per-session)
+_ACTIVE_CONTEXT = "baseline"
+
+
+@handle_errors
+@register_tool(
+    name=ARANGO_SWITCH_CONTEXT,
+    description="Switch to a different workflow context with a predefined set of tools. Enables Context Switching pattern for workflow-specific tool sets.",
+    model=SwitchContextArgs,
+)
+def handle_switch_context(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Switch to a different workflow context.
+
+    This tool enables the Context Switching pattern by allowing AI agents to
+    switch between predefined tool sets optimized for specific workflows.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: Validated SwitchContextArgs containing target context
+
+    Returns:
+        Dictionary with context switch details
+    """
+    global _ACTIVE_CONTEXT
+
+    new_context = args["context"]
+    old_context = _ACTIVE_CONTEXT
+
+    if new_context not in WORKFLOW_CONTEXTS:
+        return {
+            "error": f"Unknown context: {new_context}",
+            "available_contexts": list(WORKFLOW_CONTEXTS.keys())
+        }
+
+    old_tools = set(WORKFLOW_CONTEXTS[old_context]["tools"])
+    new_tools = set(WORKFLOW_CONTEXTS[new_context]["tools"])
+
+    tools_added = list(new_tools - old_tools)
+    tools_removed = list(old_tools - new_tools)
+
+    _ACTIVE_CONTEXT = new_context
+
+    return {
+        "from_context": old_context,
+        "to_context": new_context,
+        "description": WORKFLOW_CONTEXTS[new_context]["description"],
+        "tools_added": tools_added,
+        "tools_removed": tools_removed,
+        "total_tools": len(new_tools),
+        "active_tools": list(new_tools)
+    }
+
+
+@handle_errors
+@register_tool(
+    name=ARANGO_GET_ACTIVE_CONTEXT,
+    description="Get the currently active workflow context and its tool set.",
+    model=GetActiveContextArgs,
+)
+def handle_get_active_context(
+    db: StandardDatabase, args: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Get the currently active workflow context.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: No arguments required
+
+    Returns:
+        Dictionary with active context details
+    """
+    global _ACTIVE_CONTEXT
+
+    context_info = WORKFLOW_CONTEXTS[_ACTIVE_CONTEXT]
+
+    return {
+        "active_context": _ACTIVE_CONTEXT,
+        "description": context_info["description"],
+        "tools": context_info["tools"],
+        "tool_count": len(context_info["tools"])
+    }
+
+
+@handle_errors
+@register_tool(
+    name=ARANGO_LIST_CONTEXTS,
+    description="List all available workflow contexts with their descriptions and optional tool lists.",
+    model=ListContextsArgs,
+)
+def handle_list_contexts(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
+    """List all available workflow contexts.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: Validated ListContextsArgs with include_tools flag
+
+    Returns:
+        Dictionary with all available contexts
+    """
+    include_tools = args.get("include_tools", False)
+
+    contexts = {}
+    for context_name, context_info in WORKFLOW_CONTEXTS.items():
+        contexts[context_name] = {
+            "description": context_info["description"],
+            "tool_count": len(context_info["tools"])
+        }
+
+        if include_tools:
+            contexts[context_name]["tools"] = context_info["tools"]
+
+    return {
+        "contexts": contexts,
+        "total_contexts": len(contexts),
+        "active_context": _ACTIVE_CONTEXT
+    }
+
+
 # Register aliases for backward compatibility
 from .tool_registry import ToolRegistration
 
