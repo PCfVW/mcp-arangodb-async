@@ -21,6 +21,18 @@ from mcp_arangodb_async.handlers import (
     handle_graph_statistics,
     handle_bulk_insert,
     handle_bulk_update,
+    # MCP Design Pattern handlers
+    handle_search_tools,
+    handle_list_tools_by_category,
+    handle_switch_context,
+    handle_get_active_context,
+    handle_list_contexts,
+    handle_advance_workflow_stage,
+    handle_get_tool_usage_stats,
+    handle_unload_tools,
+    TOOL_CATEGORIES,
+    WORKFLOW_CONTEXTS,
+    WORKFLOW_STAGES,
 )
 
 
@@ -609,3 +621,306 @@ class TestGraphManagementHandlers:
             False, # aggregate_collections default
             False  # per_collection_stats default
         )
+
+
+class TestMCPDesignPatternHandlers:
+    """Test MCP Design Pattern tool handlers."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.mock_db = Mock()
+
+    # ========================================================================
+    # Pattern 1: Progressive Tool Discovery
+    # ========================================================================
+
+    def test_handle_search_tools_by_keywords(self):
+        """Test searching tools by keywords returns matching tools."""
+        args = {
+            "keywords": ["query", "graph"],
+            "categories": None,
+            "detail_level": "summary"
+        }
+
+        result = handle_search_tools(self.mock_db, args)
+
+        assert "matches" in result
+        assert "total_matches" in result
+        assert "keywords" in result
+        assert result["keywords"] == ["query", "graph"]
+        assert result["detail_level"] == "summary"
+        assert isinstance(result["matches"], list)
+        # Should find tools with "query" or "graph" in name/description
+        assert result["total_matches"] > 0
+
+    def test_handle_search_tools_with_category_filter(self):
+        """Test searching tools with category filter."""
+        args = {
+            "keywords": ["insert"],
+            "categories": ["core_data"],
+            "detail_level": "name"
+        }
+
+        result = handle_search_tools(self.mock_db, args)
+
+        assert result["categories_searched"] == ["core_data"]
+        assert result["detail_level"] == "name"
+        # All matches should only have "name" field
+        for match in result["matches"]:
+            assert "name" in match
+            assert "description" not in match or len(match) == 1
+
+    def test_handle_search_tools_full_detail(self):
+        """Test searching tools with full detail level includes schemas."""
+        args = {
+            "keywords": ["query"],
+            "categories": None,
+            "detail_level": "full"
+        }
+
+        result = handle_search_tools(self.mock_db, args)
+
+        assert result["detail_level"] == "full"
+        # At least one match should have inputSchema
+        if result["total_matches"] > 0:
+            first_match = result["matches"][0]
+            assert "name" in first_match
+            assert "description" in first_match
+            assert "inputSchema" in first_match
+
+    def test_handle_list_tools_by_category_all(self):
+        """Test listing all tool categories."""
+        args = {"category": None}
+
+        result = handle_list_tools_by_category(self.mock_db, args)
+
+        assert "categories" in result
+        assert "total_tools" in result
+        assert len(result["categories"]) == 9  # 9 categories defined
+        assert "core_data" in result["categories"]
+        assert "graph_basic" in result["categories"]
+        assert result["total_tools"] > 0
+
+    def test_handle_list_tools_by_category_single(self):
+        """Test listing tools for a single category."""
+        args = {"category": "core_data"}
+
+        result = handle_list_tools_by_category(self.mock_db, args)
+
+        assert result["category"] == "core_data"
+        assert "tools" in result
+        assert "tool_count" in result
+        assert isinstance(result["tools"], list)
+        assert result["tool_count"] == len(result["tools"])
+        # Verify core_data tools are present
+        assert result["tool_count"] > 0
+
+    def test_handle_list_tools_by_category_invalid(self):
+        """Test listing tools with invalid category returns error."""
+        args = {"category": "invalid_category"}
+
+        result = handle_list_tools_by_category(self.mock_db, args)
+
+        assert "error" in result
+        assert "available_categories" in result
+        assert "invalid_category" in result["error"]
+
+    # ========================================================================
+    # Pattern 2: Context Switching
+    # ========================================================================
+
+    def test_handle_switch_context_valid(self):
+        """Test switching to a valid workflow context."""
+        args = {"context": "graph_modeling"}
+
+        result = handle_switch_context(self.mock_db, args)
+
+        assert "from_context" in result
+        assert "to_context" in result
+        assert result["to_context"] == "graph_modeling"
+        assert "description" in result
+        assert "tools_added" in result
+        assert "tools_removed" in result
+        assert "total_tools" in result
+        assert "active_tools" in result
+        assert isinstance(result["active_tools"], list)
+
+    def test_handle_switch_context_invalid(self):
+        """Test switching to invalid context returns error."""
+        args = {"context": "invalid_context"}
+
+        result = handle_switch_context(self.mock_db, args)
+
+        assert "error" in result
+        assert "available_contexts" in result
+        assert "invalid_context" in result["error"]
+
+    def test_handle_switch_context_tracks_changes(self):
+        """Test context switching tracks tool additions and removals."""
+        # First switch to data_analysis
+        args1 = {"context": "data_analysis"}
+        result1 = handle_switch_context(self.mock_db, args1)
+
+        # Then switch to graph_modeling
+        args2 = {"context": "graph_modeling"}
+        result2 = handle_switch_context(self.mock_db, args2)
+
+        assert result2["from_context"] == "data_analysis"
+        assert result2["to_context"] == "graph_modeling"
+        # Should have tools added and removed
+        assert isinstance(result2["tools_added"], list)
+        assert isinstance(result2["tools_removed"], list)
+
+    def test_handle_get_active_context(self):
+        """Test getting the currently active context."""
+        # Switch to a known context first
+        switch_args = {"context": "bulk_operations"}
+        handle_switch_context(self.mock_db, switch_args)
+
+        # Now get active context
+        result = handle_get_active_context(self.mock_db, None)
+
+        assert "active_context" in result
+        assert result["active_context"] == "bulk_operations"
+        assert "description" in result
+        assert "tools" in result
+        assert "tool_count" in result
+        assert isinstance(result["tools"], list)
+        assert result["tool_count"] == len(result["tools"])
+
+    def test_handle_list_contexts_without_tools(self):
+        """Test listing all contexts without tool details."""
+        args = {"include_tools": False}
+
+        result = handle_list_contexts(self.mock_db, args)
+
+        assert "contexts" in result
+        assert "total_contexts" in result
+        assert "active_context" in result
+        assert len(result["contexts"]) == 6  # 6 workflow contexts
+
+        # Verify each context has description and tool_count but not tools
+        for context_name, context_info in result["contexts"].items():
+            assert "description" in context_info
+            assert "tool_count" in context_info
+            assert "tools" not in context_info
+
+    def test_handle_list_contexts_with_tools(self):
+        """Test listing all contexts with tool details."""
+        args = {"include_tools": True}
+
+        result = handle_list_contexts(self.mock_db, args)
+
+        assert "contexts" in result
+        assert len(result["contexts"]) == 6
+
+        # Verify each context includes tools list
+        for context_name, context_info in result["contexts"].items():
+            assert "description" in context_info
+            assert "tool_count" in context_info
+            assert "tools" in context_info
+            assert isinstance(context_info["tools"], list)
+
+    # ========================================================================
+    # Pattern 3: Tool Unloading
+    # ========================================================================
+
+    def test_handle_advance_workflow_stage_valid(self):
+        """Test advancing to a valid workflow stage."""
+        args = {"stage": "data_loading"}
+
+        result = handle_advance_workflow_stage(self.mock_db, args)
+
+        assert "from_stage" in result
+        assert "to_stage" in result
+        assert result["to_stage"] == "data_loading"
+        assert "description" in result
+        assert "tools_unloaded" in result
+        assert "tools_loaded" in result
+        assert "active_tools" in result
+        assert "total_active_tools" in result
+        assert isinstance(result["active_tools"], list)
+        assert result["total_active_tools"] == len(result["active_tools"])
+
+    def test_handle_advance_workflow_stage_invalid(self):
+        """Test advancing to invalid stage returns error."""
+        args = {"stage": "invalid_stage"}
+
+        result = handle_advance_workflow_stage(self.mock_db, args)
+
+        assert "error" in result
+        assert "available_stages" in result
+        assert "invalid_stage" in result["error"]
+
+    def test_handle_advance_workflow_stage_progression(self):
+        """Test stage progression tracks tool lifecycle."""
+        # First, reset to setup stage
+        reset_args = {"stage": "setup"}
+        handle_advance_workflow_stage(self.mock_db, reset_args)
+
+        # Advance from setup to data_loading
+        args1 = {"stage": "data_loading"}
+        result1 = handle_advance_workflow_stage(self.mock_db, args1)
+
+        assert result1["from_stage"] == "setup"
+        assert result1["to_stage"] == "data_loading"
+
+        # Advance to analysis
+        args2 = {"stage": "analysis"}
+        result2 = handle_advance_workflow_stage(self.mock_db, args2)
+
+        assert result2["from_stage"] == "data_loading"
+        assert result2["to_stage"] == "analysis"
+        assert isinstance(result2["tools_unloaded"], list)
+        assert isinstance(result2["tools_loaded"], list)
+
+    def test_handle_get_tool_usage_stats(self):
+        """Test getting tool usage statistics."""
+        result = handle_get_tool_usage_stats(self.mock_db, None)
+
+        assert "current_stage" in result
+        assert "tool_usage" in result
+        assert "total_tools_used" in result
+        assert "active_stage_tools" in result
+        assert isinstance(result["tool_usage"], dict)
+        assert isinstance(result["active_stage_tools"], list)
+
+    def test_handle_unload_tools_valid(self):
+        """Test manually unloading valid tools."""
+        from mcp_arangodb_async.tools import ARANGO_QUERY, ARANGO_INSERT
+
+        args = {"tool_names": [ARANGO_QUERY, ARANGO_INSERT]}
+
+        result = handle_unload_tools(self.mock_db, args)
+
+        assert "unloaded" in result
+        assert "not_found" in result
+        assert "total_unloaded" in result
+        assert ARANGO_QUERY in result["unloaded"]
+        assert ARANGO_INSERT in result["unloaded"]
+        assert result["total_unloaded"] == 2
+
+    def test_handle_unload_tools_invalid(self):
+        """Test unloading invalid tools tracks not found."""
+        args = {"tool_names": ["invalid_tool_1", "invalid_tool_2"]}
+
+        result = handle_unload_tools(self.mock_db, args)
+
+        assert "unloaded" in result
+        assert "not_found" in result
+        assert len(result["not_found"]) == 2
+        assert "invalid_tool_1" in result["not_found"]
+        assert "invalid_tool_2" in result["not_found"]
+        assert result["total_unloaded"] == 0
+
+    def test_handle_unload_tools_mixed(self):
+        """Test unloading mix of valid and invalid tools."""
+        from mcp_arangodb_async.tools import ARANGO_QUERY
+
+        args = {"tool_names": [ARANGO_QUERY, "invalid_tool"]}
+
+        result = handle_unload_tools(self.mock_db, args)
+
+        assert ARANGO_QUERY in result["unloaded"]
+        assert "invalid_tool" in result["not_found"]
+        assert result["total_unloaded"] == 1
