@@ -1,9 +1,9 @@
 # Tools Reference
 
-Complete documentation for all 34 MCP tools provided by the mcp-arangodb-async server.
+Complete documentation for all 43 MCP tools provided by the mcp-arangodb-async server.
 
-**Audience:** End Users and Developers  
-**Prerequisites:** Server installed and configured  
+**Audience:** End Users and Developers
+**Prerequisites:** Server installed and configured
 **Estimated Time:** Reference document (browse as needed)
 
 ---
@@ -20,13 +20,14 @@ Complete documentation for all 34 MCP tools provided by the mcp-arangodb-async s
 8. [Advanced Graph Management (5)](#advanced-graph-management-5)
 9. [Tool Aliases (2)](#tool-aliases-2)
 10. [Health & Status (1)](#health--status-1)
-11. [Toolset Configuration](#toolset-configuration)
+11. [MCP Design Pattern Tools (9)](#mcp-design-pattern-tools-9)
+12. [Toolset Configuration](#toolset-configuration)
 
 ---
 
 ## Overview
 
-The mcp-arangodb-async server provides **34 comprehensive tools** organized into logical categories. Each tool:
+The mcp-arangodb-async server provides **43 comprehensive tools** organized into logical categories. Each tool:
 - Uses **strict Pydantic validation** for arguments
 - Provides **consistent error handling** with detailed messages
 - Returns **JSON-serializable results** for easy integration
@@ -45,6 +46,7 @@ The mcp-arangodb-async server provides **34 comprehensive tools** organized into
 | **Advanced Graph Management** | 5 | Graph backup/restore, integrity validation, analytics |
 | **Tool Aliases** | 2 | Convenience aliases for common operations |
 | **Health & Status** | 1 | Server health checks |
+| **MCP Design Pattern Tools** | 9 | Progressive discovery, context switching, tool unloading |
 
 ---
 
@@ -951,6 +953,497 @@ Check database connectivity and return server information.
 
 ---
 
+## MCP Design Pattern Tools (9)
+
+Tools for efficient MCP tool management through progressive discovery, context switching, and tool unloading patterns. These tools enable AI agents to reduce context window consumption by up to 98.7% when working with large tool sets.
+
+**See Also:** [MCP Design Patterns Guide](./mcp-design-patterns.md) for comprehensive workflow examples and best practices.
+
+### Pattern 1: Progressive Tool Discovery (2 tools)
+
+#### arango_search_tools
+
+Search for MCP tools by keywords and categories. Enables on-demand tool loading rather than loading all tools upfront.
+
+**Parameters:**
+- `keywords` (array of strings, required) - Keywords to search for in tool names and descriptions
+- `categories` (array of strings, optional) - Filter by categories: `core_data`, `indexing`, `validation`, `schema`, `query`, `graph_basic`, `graph_advanced`, `aliases`, `health`, `mcp_patterns`
+- `detail_level` (string, optional) - Level of detail: `name` (just names), `summary` (names + descriptions), `full` (complete schemas). Default: `summary`
+
+**Returns:**
+- `matches` (array) - Matching tools with requested detail level
+- `total_matches` (integer) - Number of matching tools
+- `keywords` (array) - Keywords used in search
+- `categories_searched` (string or array) - Categories searched
+- `detail_level` (string) - Detail level returned
+
+**Example:**
+```json
+{
+  "keywords": ["graph", "traverse"],
+  "categories": ["graph_basic"],
+  "detail_level": "summary"
+}
+```
+
+**Result:**
+```json
+{
+  "matches": [
+    {
+      "name": "arango_traverse",
+      "description": "Traverse graph from a start vertex with depth bounds"
+    },
+    {
+      "name": "arango_shortest_path",
+      "description": "Compute the shortest path between two vertices"
+    }
+  ],
+  "total_matches": 2,
+  "keywords": ["graph", "traverse"],
+  "categories_searched": ["graph_basic"],
+  "detail_level": "summary"
+}
+```
+
+**Use Cases:**
+- Discover graph tools when building dependency graphs
+- Find query optimization tools for performance analysis
+- Locate validation tools for data integrity checks
+- Search for backup tools before data migration
+
+**Best Practices:**
+- Start with `detail_level: "summary"` for initial discovery
+- Use `detail_level: "full"` only when ready to execute
+- Combine multiple keywords for precise results
+- Filter by category to narrow search scope
+
+---
+
+#### arango_list_tools_by_category
+
+List all MCP tools organized by category. Useful for understanding tool organization and selecting workflow-specific tool sets.
+
+**Parameters:**
+- `category` (string, optional) - Category to filter by. If not specified, returns all categories with their tools.
+
+**Returns:**
+- If category specified: `category`, `tools`, `tool_count`
+- If no category: `categories` (object with all categories), `total_tools`
+
+**Example:**
+```json
+{
+  "category": "graph_basic"
+}
+```
+
+**Result:**
+```json
+{
+  "category": "graph_basic",
+  "tools": [
+    "arango_create_graph",
+    "arango_list_graphs",
+    "arango_add_vertex_collection",
+    "arango_add_edge_definition",
+    "arango_add_edge",
+    "arango_traverse",
+    "arango_shortest_path"
+  ],
+  "tool_count": 7
+}
+```
+
+**Use Cases:**
+- Understand tool organization before starting a workflow
+- Explore available tools in a specific domain
+- Build custom tool sets for specialized workflows
+- Document available capabilities for team members
+
+**Best Practices:**
+- Call without parameters to see all categories first
+- Use category filter to focus on specific domains
+- Combine with `arango_search_tools` for precise discovery
+
+---
+
+### Pattern 2: Context Switching (3 tools)
+
+#### arango_switch_context
+
+Switch to a different workflow context with a predefined set of tools. Enables workflow-specific tool sets for different use cases.
+
+**Parameters:**
+- `context` (string, required) - Workflow context to switch to: `baseline`, `data_analysis`, `graph_modeling`, `bulk_operations`, `schema_validation`, `full`
+
+**Returns:**
+- `from_context` (string) - Previous context
+- `to_context` (string) - New active context
+- `description` (string) - Description of new context
+- `tools_added` (array) - Tools added in new context
+- `tools_removed` (array) - Tools removed from previous context
+- `total_tools` (integer) - Total tools in new context
+- `active_tools` (array) - All tools in new context
+
+**Available Contexts:**
+- `baseline` (7 tools) - Minimal CRUD operations for basic database interaction
+- `data_analysis` (7 tools) - Query optimization and performance analysis
+- `graph_modeling` (10 tools) - Graph creation, traversal, and analysis
+- `bulk_operations` (6 tools) - Batch processing and bulk data operations
+- `schema_validation` (6 tools) - Data integrity and schema management
+- `full` (43 tools) - All available tools (fallback for complex workflows)
+
+**Example:**
+```json
+{
+  "context": "graph_modeling"
+}
+```
+
+**Result:**
+```json
+{
+  "from_context": "baseline",
+  "to_context": "graph_modeling",
+  "description": "Graph creation, traversal, and analysis",
+  "tools_added": [
+    "arango_create_graph",
+    "arango_traverse",
+    "arango_shortest_path"
+  ],
+  "tools_removed": [
+    "arango_backup"
+  ],
+  "total_tools": 10,
+  "active_tools": [
+    "arango_create_graph",
+    "arango_list_graphs",
+    "arango_add_vertex_collection",
+    "arango_add_edge_definition",
+    "arango_add_edge",
+    "arango_traverse",
+    "arango_shortest_path",
+    "arango_graph_statistics",
+    "arango_validate_graph_integrity",
+    "arango_query"
+  ]
+}
+```
+
+**Use Cases:**
+- Switch to `graph_modeling` for dependency analysis
+- Use `data_analysis` for query optimization workflows
+- Switch to `bulk_operations` for data migration
+- Use `schema_validation` for data integrity checks
+
+**Best Practices:**
+- Match context to workflow stage
+- Minimize context switches (group related operations)
+- Verify context before operations with `arango_get_active_context`
+- Use `full` context only when truly needed
+
+---
+
+#### arango_get_active_context
+
+Get the currently active workflow context and its tool set.
+
+**Parameters:**
+- None (empty object or omitted)
+
+**Returns:**
+- `active_context` (string) - Current context name
+- `description` (string) - Context description
+- `tools` (array) - Tools in current context
+- `tool_count` (integer) - Number of tools
+
+**Example:**
+```json
+{}
+```
+
+**Result:**
+```json
+{
+  "active_context": "graph_modeling",
+  "description": "Graph creation, traversal, and analysis",
+  "tools": [
+    "arango_create_graph",
+    "arango_list_graphs",
+    "arango_add_vertex_collection",
+    "arango_add_edge_definition",
+    "arango_add_edge",
+    "arango_traverse",
+    "arango_shortest_path",
+    "arango_graph_statistics",
+    "arango_validate_graph_integrity",
+    "arango_query"
+  ],
+  "tool_count": 10
+}
+```
+
+**Use Cases:**
+- Verify current context before operations
+- Debug workflow issues
+- Log context state for audit trails
+- Confirm successful context switches
+
+---
+
+#### arango_list_contexts
+
+List all available workflow contexts with their descriptions and optional tool lists.
+
+**Parameters:**
+- `include_tools` (boolean, optional) - Include tool lists for each context. Default: `false`
+
+**Returns:**
+- `contexts` (object) - All available contexts with descriptions and tool counts
+- `total_contexts` (integer) - Number of available contexts
+- `active_context` (string) - Currently active context
+
+**Example:**
+```json
+{
+  "include_tools": false
+}
+```
+
+**Result:**
+```json
+{
+  "contexts": {
+    "baseline": {
+      "description": "Minimal CRUD operations for basic database interaction",
+      "tool_count": 7
+    },
+    "data_analysis": {
+      "description": "Query optimization and performance analysis",
+      "tool_count": 7
+    },
+    "graph_modeling": {
+      "description": "Graph creation, traversal, and analysis",
+      "tool_count": 10
+    },
+    "bulk_operations": {
+      "description": "Batch processing and bulk data operations",
+      "tool_count": 6
+    },
+    "schema_validation": {
+      "description": "Data integrity and schema management",
+      "tool_count": 6
+    },
+    "full": {
+      "description": "All available tools",
+      "tool_count": 43
+    }
+  },
+  "total_contexts": 6,
+  "active_context": "baseline"
+}
+```
+
+**Use Cases:**
+- Explore available contexts before starting a workflow
+- Document context options for team members
+- Build custom context selection logic
+- Understand tool organization by workflow type
+
+---
+
+### Pattern 3: Tool Unloading (4 tools)
+
+#### arango_advance_workflow_stage
+
+Advance to the next workflow stage, automatically unloading tools from previous stage and loading tools for new stage.
+
+**Parameters:**
+- `stage` (string, required) - Workflow stage to advance to: `setup`, `data_loading`, `analysis`, `cleanup`
+
+**Returns:**
+- `from_stage` (string or null) - Previous stage (null if first stage)
+- `to_stage` (string) - New active stage
+- `description` (string) - Description of new stage
+- `tools_added` (array) - Tools added in new stage
+- `tools_removed` (array) - Tools removed from previous stage
+- `total_active_tools` (integer) - Total tools in new stage
+- `active_tools` (array) - All tools in new stage
+
+**Available Stages:**
+- `setup` (8 tools) - Database initialization, collection creation, schema setup
+- `data_loading` (6 tools) - Bulk data import, validation, initial indexing
+- `analysis` (12 tools) - Query execution, graph traversal, statistics generation
+- `cleanup` (5 tools) - Backup, validation, integrity checks, finalization
+
+**Example:**
+```json
+{
+  "stage": "data_loading"
+}
+```
+
+**Result:**
+```json
+{
+  "from_stage": "setup",
+  "to_stage": "data_loading",
+  "description": "Bulk data import, validation, initial indexing",
+  "tools_added": [
+    "arango_bulk_insert",
+    "arango_bulk_update",
+    "arango_insert_with_validation"
+  ],
+  "tools_removed": [
+    "arango_create_collection",
+    "arango_create_schema"
+  ],
+  "total_active_tools": 6,
+  "active_tools": [
+    "arango_bulk_insert",
+    "arango_bulk_update",
+    "arango_insert_with_validation",
+    "arango_validate_references",
+    "arango_create_index",
+    "arango_list_indexes"
+  ]
+}
+```
+
+**Use Cases:**
+- Structured data pipelines with clear stage boundaries
+- Multi-phase workflows (setup → data_loading → analysis → cleanup)
+- Automatic tool management for predictable patterns
+- Reduce cognitive load during complex operations
+
+**Best Practices:**
+- Define clear stage boundaries in your workflow
+- Advance stages when transitioning between major phases
+- Let the server automatically manage tool loading/unloading
+- Use for predictable, structured pipelines
+
+---
+
+#### arango_get_tool_usage_stats
+
+Get usage statistics for all tools, including use counts and last used timestamps. Useful for understanding tool usage patterns and identifying unused tools.
+
+**Parameters:**
+- None (empty object or omitted)
+
+**Returns:**
+- `total_tools` (integer) - Total number of tools
+- `tools_used` (integer) - Number of tools that have been used
+- `tools_unused` (integer) - Number of tools never used
+- `usage_stats` (array) - Per-tool statistics with name, use_count, last_used, category
+
+**Example:**
+```json
+{}
+```
+
+**Result:**
+```json
+{
+  "total_tools": 43,
+  "tools_used": 12,
+  "tools_unused": 31,
+  "usage_stats": [
+    {
+      "name": "arango_query",
+      "use_count": 45,
+      "last_used": "2025-11-11T10:30:15Z",
+      "category": "core_data"
+    },
+    {
+      "name": "arango_create_graph",
+      "use_count": 3,
+      "last_used": "2025-11-11T09:15:42Z",
+      "category": "graph_basic"
+    },
+    {
+      "name": "arango_backup",
+      "use_count": 0,
+      "last_used": null,
+      "category": "core_data"
+    }
+  ]
+}
+```
+
+**Use Cases:**
+- Identify unused tools to unload
+- Analyze tool usage patterns for optimization
+- Debug workflow issues by tracking tool invocations
+- Generate usage reports for team visibility
+
+**Best Practices:**
+- Call periodically to monitor tool usage
+- Unload tools with zero usage after initial setup
+- Track usage patterns to optimize future workflows
+- Use for workflow analysis and optimization
+
+---
+
+#### arango_unload_tools
+
+Manually unload specific tools from the active context. Useful for fine-grained control over tool lifecycle.
+
+**Parameters:**
+- `tool_names` (array of strings, required) - List of tool names to unload from active context
+
+**Returns:**
+- `unloaded_tools` (array) - Tools successfully unloaded
+- `not_found` (array) - Tools not found in active context
+- `remaining_tools` (integer) - Number of tools still active
+- `active_tools` (array) - All remaining active tools
+
+**Example:**
+```json
+{
+  "tool_names": ["arango_backup", "arango_create_schema", "arango_validate_document"]
+}
+```
+
+**Result:**
+```json
+{
+  "unloaded_tools": [
+    "arango_backup",
+    "arango_create_schema"
+  ],
+  "not_found": [
+    "arango_validate_document"
+  ],
+  "remaining_tools": 8,
+  "active_tools": [
+    "arango_query",
+    "arango_insert",
+    "arango_update",
+    "arango_remove",
+    "arango_list_collections",
+    "arango_create_collection",
+    "arango_bulk_insert",
+    "arango_bulk_update"
+  ]
+}
+```
+
+**Use Cases:**
+- Remove tools after completing a specific task
+- Clean up context before switching workflows
+- Manually optimize tool set based on usage patterns
+- Reduce cognitive load during complex operations
+
+**Best Practices:**
+- Unload tools immediately after completing tasks
+- Don't unload tools you'll need again soon
+- Combine with `arango_get_tool_usage_stats` to identify candidates
+- Use for dynamic workflows where stages don't match your needs
+
+---
+
 ## Toolset Configuration
 
 Control available tools using the `MCP_COMPAT_TOOLSET` environment variable:
@@ -977,16 +1470,18 @@ Control available tools using the `MCP_COMPAT_TOOLSET` environment variable:
 
 **Value:** `MCP_COMPAT_TOOLSET=full` (or unset)
 
-**Includes:** All 34 tools across all categories
+**Includes:** All 43 tools across all categories
 
 **Use Cases:**
 - Production deployments
 - Advanced graph operations
+- MCP design pattern workflows
 - Complete feature access
 
 ---
 
 ## Related Documentation
+- [MCP Design Patterns Guide](./mcp-design-patterns.md) - Comprehensive guide to progressive discovery, context switching, and tool unloading
 - [First Interaction Guide](../getting-started/first-interaction.md)
 - [Graph Operations Guide](graph-operations.md)
 - [Codebase Analysis Example](../examples/codebase-analysis.md)

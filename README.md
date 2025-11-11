@@ -19,13 +19,16 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 
 📖 **Tools Reference:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md)
 
+🎯 **MCP Design Patterns:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/mcp-design-patterns.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/mcp-design-patterns.md)
+
 🐛 **Issues:** [https://github.com/PCfVW/mcp-arango-async/issues](https://github.com/PCfVW/mcp-arango-async/issues)
 
 ---
 
 ## Features
 
-✅ **34 MCP Tools** - Complete ArangoDB operations (queries, collections, indexes, graphs)
+✅ **43 MCP Tools** - Complete ArangoDB operations (queries, collections, indexes, graphs)
+✅ **MCP Design Patterns** - Progressive discovery, context switching, tool unloading (98.7% token savings)
 ✅ **Graph Management** - Create, traverse, backup/restore named graphs
 ✅ **Content Conversion** - JSON, Markdown, YAML, and Table formats
 ✅ **Backup/Restore** - Collection and graph-level backup with validation
@@ -43,9 +46,9 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 ┌────────────────────┐      ┌─────────────────────┐      ┌──────────────────┐
 │   MCP Client       │      │  ArangoDB MCP       │      │   ArangoDB       │
 │ (Claude, Augment)  │─────▶│  Server (Python)    │─────▶│  (Docker)        │
-│                    │      │  • 34 Tools         │      │  • Multi-Model   │
+│                    │      │  • 43 Tools         │      │  • Multi-Model   │
 │                    │      │  • Graph Mgmt       │      │  • Graph Engine  │
-│                    │      │  • Analytics        │      │  • AQL Engine    │
+│                    │      │  • MCP Patterns     │      │  • AQL Engine    │
 └────────────────────┘      └─────────────────────┘      └──────────────────┘
 ```
 
@@ -221,7 +224,7 @@ LOG_LEVEL=INFO                         # DEBUG, INFO, WARNING, ERROR
 
 ## Available Tools
 
-The server exposes **34 MCP tools** organized into 9 categories:
+The server exposes **43 MCP tools** organized into 10 categories:
 
 ### Core Data Operations (7 tools)
 - `arango_query` - Execute AQL queries
@@ -275,7 +278,20 @@ The server exposes **34 MCP tools** organized into 9 categories:
 - `arango_graph_statistics` - Graph statistics
 - `arango_database_status` - Database status
 
+### MCP Design Pattern Tools (9 tools)
+- `arango_search_tools` - Search for tools by keywords
+- `arango_list_tools_by_category` - List tools by category
+- `arango_switch_context` - Switch workflow context
+- `arango_get_active_context` - Get active context
+- `arango_list_contexts` - List all contexts
+- `arango_advance_workflow_stage` - Advance workflow stage
+- `arango_get_tool_usage_stats` - Get tool usage statistics
+- `arango_unload_tools` - Unload specific tools
+- `arango_graph_traversal` - Alias for arango_traverse
+
 📖 **Complete tools reference:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/tools-reference.md)
+
+📖 **MCP Design Patterns Guide:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/mcp-design-patterns.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/mcp-design-patterns.md)
 
 ---
 

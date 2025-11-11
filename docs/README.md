@@ -49,9 +49,15 @@ Start here if you're new to mcp-arangodb-async.
 Complete reference for using the server.
 
 1. **[Tools Reference](user-guide/tools-reference.md)** (30 min)
-   - All 34 MCP tools documented
-   - 9 categories: CRUD, Queries, Collections, Indexes, Graphs, Analytics, Backup, Content, Database
+   - All 43 MCP tools documented
+   - 10 categories: CRUD, Queries, Collections, Indexes, Graphs, Analytics, Backup, Content, Database, MCP Patterns
    - Arguments, return values, examples
+
+2. **[MCP Design Patterns Guide](user-guide/mcp-design-patterns.md)** (45-60 min)
+   - Progressive Tool Discovery - Load tools on-demand (98.7% token savings)
+   - Context Switching - Switch between workflow-specific tool sets
+   - Tool Unloading - Remove tools as workflows progress
+   - Combining patterns for complex workflows
    - Toolset configuration (baseline vs full)
 
 2. **[Troubleshooting Guide](user-guide/troubleshooting.md)** (20 min)
@@ -247,7 +253,7 @@ python -m mcp_arangodb_async --health
 List all available ArangoDB tools
 ```
 
-**Expected:** Claude lists 34 tools in 9 categories.
+**Expected:** Claude lists 43 tools in 10 categories.
 
 ---
 
