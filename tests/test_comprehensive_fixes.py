@@ -109,8 +109,9 @@ class TestGraphIntegrityFix:
         mock_db.has_graph.return_value = True
         
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}]
+            "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}]
         }
         mock_db.graph.return_value = mock_graph
         mock_db.has_collection.return_value = True

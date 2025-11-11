@@ -27,16 +27,17 @@ class TestBackupGraphToDir:
         mock_graph = Mock()
         mock_db.has_graph.return_value = True
         mock_db.graph.return_value = mock_graph
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
             "name": "test_graph",
-            "edgeDefinitions": [
+            "edge_definitions": [
                 {
-                    "collection": "follows",
-                    "from": ["users"],
-                    "to": ["users"]
+                    "edge_collection": "follows",
+                    "from_vertex_collections": ["users"],
+                    "to_vertex_collections": ["users"]
                 }
             ],
-            "orphanCollections": ["posts"]
+            "orphan_collections": ["posts"]
         }
         
         # Mock collections
@@ -75,9 +76,10 @@ class TestBackupGraphToDir:
         mock_graph = Mock()
         mock_db.has_graph.return_value = True
         mock_db.graph.return_value = mock_graph
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}],
-            "orphanCollections": []
+            "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}],
+            "orphan_collections": []
         }
         mock_db.has_collection.return_value = True
         
@@ -104,9 +106,10 @@ class TestBackupGraphToDir:
         mock_graph = Mock()
         mock_db.has_graph.return_value = True
         mock_db.graph.return_value = mock_graph
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [],
-            "orphanCollections": ["test_col"]
+            "edge_definitions": [],
+            "orphan_collections": ["test_col"]
         }
         mock_db.has_collection.return_value = True
         
@@ -130,11 +133,12 @@ class TestRestoreGraphFromDir:
         mock_db.create_graph.return_value = Mock()
         
         # Mock metadata file
+        # Note: python-arango returns snake_case keys, not camelCase
         metadata = {
             "graph_name": "test_graph",
             "graph_properties": {
-                "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}],
-                "orphanCollections": []
+                "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}],
+                "orphan_collections": []
             }
         }
         
@@ -177,10 +181,11 @@ class TestRestoreGraphFromDir:
         """Test restore with existing graph and error conflict resolution."""
         mock_db = Mock()
         mock_db.has_graph.return_value = True  # Graph already exists
-        
+
+        # Note: python-arango returns snake_case keys, not camelCase
         metadata = {
             "graph_name": "existing_graph",
-            "graph_properties": {"edgeDefinitions": [], "orphanCollections": []}
+            "graph_properties": {"edge_definitions": [], "orphan_collections": []}
         }
         
         with TemporaryDirectory() as tmp_dir:
@@ -200,9 +205,10 @@ class TestBackupNamedGraphs:
     def test_backup_named_graphs_all(self):
         """Test backing up all named graphs."""
         mock_db = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_db.graphs.return_value = [
-            {"name": "graph1", "edgeDefinitions": []},
-            {"name": "graph2", "edgeDefinitions": []}
+            {"name": "graph1", "edge_definitions": []},
+            {"name": "graph2", "edge_definitions": []}
         ]
         
         with TemporaryDirectory() as tmp_dir:
@@ -224,9 +230,10 @@ class TestBackupNamedGraphs:
     def test_backup_named_graphs_specific(self):
         """Test backing up specific named graphs."""
         mock_db = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_db.graphs.return_value = [
-            {"name": "graph1", "edgeDefinitions": []},
-            {"name": "graph2", "edgeDefinitions": []}
+            {"name": "graph1", "edge_definitions": []},
+            {"name": "graph2", "edge_definitions": []}
         ]
         
         with TemporaryDirectory() as tmp_dir:
@@ -248,8 +255,9 @@ class TestValidateGraphIntegrity:
         mock_db.has_graph.return_value = True
         
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}]
+            "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}]
         }
         mock_db.graph.return_value = mock_graph
         mock_db.has_collection.return_value = True
@@ -274,8 +282,9 @@ class TestValidateGraphIntegrity:
         mock_db.has_graph.return_value = True
 
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}]
+            "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}]
         }
         mock_db.graph.return_value = mock_graph
         mock_db.has_collection.return_value = True
@@ -305,8 +314,9 @@ class TestValidateGraphIntegrity:
         mock_db.has_graph.return_value = True
 
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}]
+            "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}]
         }
         mock_db.graph.return_value = mock_graph
         mock_db.has_collection.return_value = True
@@ -329,8 +339,9 @@ class TestValidateGraphIntegrity:
         mock_db.has_graph.return_value = True
 
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}]
+            "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}]
         }
         mock_db.graph.return_value = mock_graph
         mock_db.has_collection.return_value = True
@@ -367,9 +378,10 @@ class TestCalculateGraphStatistics:
         mock_db.has_graph.return_value = True
         
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
-            "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}],
-            "orphanCollections": []
+            "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}],
+            "orphan_collections": []
         }
         mock_db.graph.return_value = mock_graph
         mock_db.has_collection.return_value = True

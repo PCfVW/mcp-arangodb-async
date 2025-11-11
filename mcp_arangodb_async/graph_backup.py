@@ -74,14 +74,15 @@ def backup_graph_to_dir(
     # Extract collections from edge definitions
     vertex_collections = set()
     edge_collections = set()
-    
-    for edge_def in graph_info.get("edgeDefinitions", []):
-        edge_collections.add(edge_def["collection"])
-        vertex_collections.update(edge_def.get("from", []))
-        vertex_collections.update(edge_def.get("to", []))
-    
+
+    # Note: python-arango returns snake_case keys, not camelCase
+    for edge_def in graph_info.get("edge_definitions", []):
+        edge_collections.add(edge_def["edge_collection"])
+        vertex_collections.update(edge_def.get("from_vertex_collections", []))
+        vertex_collections.update(edge_def.get("to_vertex_collections", []))
+
     # Add orphan collections
-    vertex_collections.update(graph_info.get("orphanCollections", []))
+    vertex_collections.update(graph_info.get("orphan_collections", []))
     
     # Backup vertex collections
     vertex_dir = os.path.join(output_dir, "vertices")
@@ -321,8 +322,9 @@ def restore_graph_from_dir(
                 db.delete_graph(target_graph_name, ignore_missing=True)
 
         # Create graph with original edge definitions
-        edge_definitions = graph_properties.get("edgeDefinitions", [])
-        orphan_collections = graph_properties.get("orphanCollections", [])
+        # Note: python-arango returns snake_case keys, not camelCase
+        edge_definitions = graph_properties.get("edge_definitions", [])
+        orphan_collections = graph_properties.get("orphan_collections", [])
 
         graph = db.create_graph(
             name=target_graph_name,
@@ -459,10 +461,11 @@ def validate_graph_integrity(
 
         if check_orphaned_edges:
             # Check each edge collection for orphaned edges
-            for edge_def in graph_props.get("edgeDefinitions", []):
-                edge_col_name = edge_def["collection"]
-                from_collections = edge_def.get("from", [])
-                to_collections = edge_def.get("to", [])
+            # Note: python-arango returns snake_case keys, not camelCase
+            for edge_def in graph_props.get("edge_definitions", []):
+                edge_col_name = edge_def["edge_collection"]
+                from_collections = edge_def.get("from_vertex_collections", [])
+                to_collections = edge_def.get("to_vertex_collections", [])
 
                 if db.has_collection(edge_col_name):
                     edge_col = db.collection(edge_col_name)
@@ -559,12 +562,13 @@ def calculate_graph_statistics(
         vertex_collections = set()
         edge_collections = set()
 
-        for edge_def in graph_props.get("edgeDefinitions", []):
-            edge_collections.add(edge_def["collection"])
-            vertex_collections.update(edge_def.get("from", []))
-            vertex_collections.update(edge_def.get("to", []))
+        # Note: python-arango returns snake_case keys, not camelCase
+        for edge_def in graph_props.get("edge_definitions", []):
+            edge_collections.add(edge_def["edge_collection"])
+            vertex_collections.update(edge_def.get("from_vertex_collections", []))
+            vertex_collections.update(edge_def.get("to_vertex_collections", []))
 
-        vertex_collections.update(graph_props.get("orphanCollections", []))
+        vertex_collections.update(graph_props.get("orphan_collections", []))
 
         # Count documents
         total_vertices = sum(db.collection(col).count() for col in vertex_collections if db.has_collection(col))

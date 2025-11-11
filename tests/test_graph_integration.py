@@ -71,16 +71,17 @@ class TestGraphManagementIntegration:
         """Test successful backup graph tool call through MCP."""
         # Set up mock database for graph operations
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
             "name": "test_graph",
-            "edgeDefinitions": [
+            "edge_definitions": [
                 {
-                    "collection": "edges",
-                    "from": ["vertices"],
-                    "to": ["vertices"]
+                    "edge_collection": "edges",
+                    "from_vertex_collections": ["vertices"],
+                    "to_vertex_collections": ["vertices"]
                 }
             ],
-            "orphanCollections": []
+            "orphan_collections": []
         }
 
         self.mock_db.has_graph.return_value = True
@@ -136,12 +137,13 @@ class TestGraphManagementIntegration:
                 mock_restore_file.return_value = {"inserted": 75, "updated": 0}  # 75 documents restored per collection
 
                 # Mock metadata file reading
+                # Note: python-arango returns snake_case keys, not camelCase
                 metadata = {
                     "graph_name": "test_graph",
                     "graph_properties": {
                         "name": "test_graph",
-                        "edgeDefinitions": [{"collection": "edges", "from": ["vertices"], "to": ["vertices"]}],
-                        "orphanCollections": []
+                        "edge_definitions": [{"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}],
+                        "orphan_collections": []
                     }
                 }
                 with patch('builtins.open', mock_open(read_data=json.dumps(metadata))):
@@ -163,10 +165,11 @@ class TestGraphManagementIntegration:
     async def test_backup_named_graphs_tool_success(self):
         """Test successful backup named graphs tool call through MCP."""
         # Set up mock database with iterable graphs as dictionaries
+        # Note: python-arango returns snake_case keys, not camelCase
         graph_data = [
-            {"name": "graph1", "edgeDefinitions": [], "orphanCollections": []},
-            {"name": "graph2", "edgeDefinitions": [], "orphanCollections": []},
-            {"name": "graph3", "edgeDefinitions": [], "orphanCollections": []}
+            {"name": "graph1", "edge_definitions": [], "orphan_collections": []},
+            {"name": "graph2", "edge_definitions": [], "orphan_collections": []},
+            {"name": "graph3", "edge_definitions": [], "orphan_collections": []}
         ]
 
         # Make graphs() return an iterable list of dictionaries
@@ -193,12 +196,13 @@ class TestGraphManagementIntegration:
         """Test successful graph integrity validation tool call through MCP."""
         # Set up mock database with proper graph structure
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
             "name": "test_graph",
-            "edgeDefinitions": [
-                {"collection": "edges", "from": ["vertices"], "to": ["vertices"]}
+            "edge_definitions": [
+                {"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}
             ],
-            "orphanCollections": []
+            "orphan_collections": []
         }
         self.mock_db.has_graph.return_value = True
         self.mock_db.graph.return_value = mock_graph
@@ -233,12 +237,13 @@ class TestGraphManagementIntegration:
         """Test successful graph statistics tool call through MCP."""
         # Set up mock database with proper graph structure
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
             "name": "test_graph",
-            "edgeDefinitions": [
-                {"collection": "edges", "from": ["vertices"], "to": ["vertices"]}
+            "edge_definitions": [
+                {"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}
             ],
-            "orphanCollections": []
+            "orphan_collections": []
         }
         self.mock_db.has_graph.return_value = True
         self.mock_db.graph.return_value = mock_graph
@@ -332,12 +337,13 @@ class TestGraphManagementIntegration:
         """Test graph management tools work with field aliases."""
         # Set up mock database with proper graph structure
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
             "name": "test_graph",
-            "edgeDefinitions": [
-                {"collection": "edges", "from": ["vertices"], "to": ["vertices"]}
+            "edge_definitions": [
+                {"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}
             ],
-            "orphanCollections": []
+            "orphan_collections": []
         }
         self.mock_db.has_graph.return_value = True
         self.mock_db.graph.return_value = mock_graph

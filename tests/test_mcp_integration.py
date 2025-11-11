@@ -212,12 +212,13 @@ class TestMCPIntegration:
         """Test successful backup graph tool call."""
         # Setup mock database with proper graph structure
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
             "name": "test_graph",
-            "edgeDefinitions": [
-                {"collection": "edges", "from": ["vertices"], "to": ["vertices"]}
+            "edge_definitions": [
+                {"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}
             ],
-            "orphanCollections": []
+            "orphan_collections": []
         }
         self.mock_db.has_graph.return_value = True
         self.mock_db.graph.return_value = mock_graph
@@ -265,12 +266,13 @@ class TestMCPIntegration:
         """Test graph statistics tool call with field aliases."""
         # Setup mock database with proper graph structure
         mock_graph = Mock()
+        # Note: python-arango returns snake_case keys, not camelCase
         mock_graph.properties.return_value = {
             "name": "test_graph",
-            "edgeDefinitions": [
-                {"collection": "edges", "from": ["vertices"], "to": ["vertices"]}
+            "edge_definitions": [
+                {"edge_collection": "edges", "from_vertex_collections": ["vertices"], "to_vertex_collections": ["vertices"]}
             ],
-            "orphanCollections": []
+            "orphan_collections": []
         }
         self.mock_db.has_graph.return_value = True
         self.mock_db.graph.return_value = mock_graph
