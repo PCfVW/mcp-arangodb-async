@@ -10,6 +10,15 @@ Functions:
 - backup_named_graphs() - Backup graph definitions from _graphs collection
 - validate_graph_integrity() - Validate graph consistency and constraints
 - calculate_graph_statistics() - Generate comprehensive graph analytics
+
+API Convention Note:
+The python-arango library returns graph properties with snake_case keys (not camelCase).
+Key graph property fields:
+  - edge_definitions: list of edge collection definitions
+  - edge_collection: name of the edge collection
+  - from_vertex_collections: list of source vertex collections
+  - to_vertex_collections: list of target vertex collections
+  - orphan_collections: vertex collections without edges
 """
 
 from __future__ import annotations
@@ -70,18 +79,24 @@ def backup_graph_to_dir(
     # Get graph metadata
     graph = db.graph(graph_name)
     graph_info = graph.properties()
-    
+
     # Extract collections from edge definitions
     vertex_collections = set()
     edge_collections = set()
 
-    # Note: python-arango returns snake_case keys, not camelCase
+    # API Convention: python-arango returns snake_case keys (not camelCase)
+    # Graph properties structure:
+    #   - edge_definitions: list of edge collection definitions
+    #   - edge_collection: name of the edge collection
+    #   - from_vertex_collections: list of source vertex collections
+    #   - to_vertex_collections: list of target vertex collections
+    #   - orphan_collections: vertex collections without edges
     for edge_def in graph_info.get("edge_definitions", []):
         edge_collections.add(edge_def["edge_collection"])
         vertex_collections.update(edge_def.get("from_vertex_collections", []))
         vertex_collections.update(edge_def.get("to_vertex_collections", []))
 
-    # Add orphan collections
+    # Add orphan collections (vertex collections not connected by edges)
     vertex_collections.update(graph_info.get("orphan_collections", []))
     
     # Backup vertex collections
@@ -322,7 +337,8 @@ def restore_graph_from_dir(
                 db.delete_graph(target_graph_name, ignore_missing=True)
 
         # Create graph with original edge definitions
-        # Note: python-arango returns snake_case keys, not camelCase
+        # API Convention: python-arango returns snake_case keys (not camelCase)
+        # Extract edge_definitions and orphan_collections from backed-up graph properties
         edge_definitions = graph_properties.get("edge_definitions", [])
         orphan_collections = graph_properties.get("orphan_collections", [])
 
@@ -461,7 +477,8 @@ def validate_graph_integrity(
 
         if check_orphaned_edges:
             # Check each edge collection for orphaned edges
-            # Note: python-arango returns snake_case keys, not camelCase
+            # API Convention: python-arango returns snake_case keys (not camelCase)
+            # Each edge_def contains: edge_collection, from_vertex_collections, to_vertex_collections
             for edge_def in graph_props.get("edge_definitions", []):
                 edge_col_name = edge_def["edge_collection"]
                 from_collections = edge_def.get("from_vertex_collections", [])
@@ -558,16 +575,19 @@ def calculate_graph_statistics(
         graph = db.graph(gname)
         graph_props = graph.properties()
 
-        # Basic counts
+        # Basic counts - extract all vertex and edge collections from graph structure
         vertex_collections = set()
         edge_collections = set()
 
-        # Note: python-arango returns snake_case keys, not camelCase
+        # API Convention: python-arango returns snake_case keys (not camelCase)
+        # Graph properties structure matches the format used in backup_graph_to_dir()
+        # See: https://docs.python-arango.com/en/main/specs.html#graph-management
         for edge_def in graph_props.get("edge_definitions", []):
             edge_collections.add(edge_def["edge_collection"])
             vertex_collections.update(edge_def.get("from_vertex_collections", []))
             vertex_collections.update(edge_def.get("to_vertex_collections", []))
 
+        # Include orphan collections (vertex collections without edges)
         vertex_collections.update(graph_props.get("orphan_collections", []))
 
         # Count documents
