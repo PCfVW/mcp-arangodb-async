@@ -15,8 +15,8 @@ import os
 import sys
 from pathlib import Path
 
-# Add parent directory to path to import mcp_arangodb_async
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root directory to path to import mcp_arangodb_async
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from mcp_arangodb_async.entry import server
 from mcp_arangodb_async.config import load_config

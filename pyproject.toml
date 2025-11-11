@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-arangodb-async"
-version = "0.3.2"
+version = "0.4.0"
 description = "A Model Context Protocol server for ArangoDB"
-publish_on_pypi = true  # Set to false to skip publish, Set to true when you want to publish
+publish_on_pypi = true  # Set to false to skip publish, Set to true when you want to publish with an increased version number
 readme = "README.md"
 license = "Apache-2.0"
 authors = [

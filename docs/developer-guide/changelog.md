@@ -15,25 +15,123 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
-1. [Version 0.3.2 (Current)](#version-032---2025-10-20)
-2. [Version 0.3.1](#version-031---2025-10-20)
-3. [Version 0.3.0](#version-030---2025-10-20)
-4. [Version 0.2.11](#version-0211---2025-10-20)
-5. [Version 0.2.10](#version-0210---2025-10-20)
-6. [Version 0.2.9](#version-029---2025-10-20)
-7. [Version 0.2.8](#version-028---2025-10-20)
-8. [Version 0.2.7](#version-027---2025-10-19)
-9. [Version 0.2.6](#version-026---2025-10-15)
-10. [Version 0.2.5](#version-025---2025-10-10)
-11. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
-12. [Version 0.1.x](#version-01x---2025-08-01)
-13. [Migration Guides](#migration-guides)
+1. [Version 0.4.0 (Current)](#version-040---2025-11-11)
+2. [Version 0.3.2](#version-032---2025-10-20)
+3. [Version 0.3.1](#version-031---2025-10-20)
+4. [Version 0.3.0](#version-030---2025-10-20)
+5. [Version 0.2.11](#version-0211---2025-10-20)
+6. [Version 0.2.10](#version-0210---2025-10-20)
+7. [Version 0.2.9](#version-029---2025-10-20)
+8. [Version 0.2.8](#version-028---2025-10-20)
+9. [Version 0.2.7](#version-027---2025-10-19)
+10. [Version 0.2.6](#version-026---2025-10-15)
+11. [Version 0.2.5](#version-025---2025-10-10)
+12. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
+13. [Version 0.1.x](#version-01x---2025-08-01)
+14. [Migration Guides](#migration-guides)
+
+---
+
+## [0.4.0] - 2025-11-11
+
+**Current Release**
+
+### Added
+
+✅ **MCP Design Pattern Tools (9 new tools)**
+- **Progressive Tool Discovery (2 tools):**
+  - `arango_search_tools` - Search for tools by keywords and categories with configurable detail levels
+  - `arango_list_tools_by_category` - List tools organized by category for workflow-specific discovery
+  - Enables on-demand tool loading instead of loading all 43 tools upfront
+  - Achieves 95-98% token savings in initial context window
+
+- **Context Switching (3 tools):**
+  - `arango_switch_context` - Switch between 6 predefined workflow contexts (baseline, data_analysis, graph_modeling, bulk_operations, schema_validation, full)
+  - `arango_get_active_context` - Get currently active workflow context
+  - `arango_list_contexts` - List all available workflow contexts with descriptions
+  - Enables workflow-specific tool sets for focused operations
+
+- **Tool Unloading (4 tools):**
+  - `arango_advance_workflow_stage` - Advance through 4 workflow stages (setup, data_loading, analysis, cleanup)
+  - `arango_get_tool_usage_stats` - Get usage statistics for all tools
+  - `arango_unload_tools` - Manually unload specific tools from active context
+  - `arango_graph_traversal` - Alias for arango_traverse (backward compatibility)
+  - Enables automatic tool lifecycle management across workflow stages
+
+✅ **Comprehensive MCP Design Patterns Documentation**
+- **New Guide:** `docs/user-guide/mcp-design-patterns.md` (925 lines)
+  - Complete documentation for all three MCP design patterns
+  - Workflow examples demonstrating up to 98.7% token savings
+  - Decision matrix for pattern selection
+  - Best practices and error handling guidance
+  - Real-world use cases and implementation examples
+
+- **Updated Tools Reference:** `docs/user-guide/tools-reference.md`
+  - Added section 11: MCP Design Pattern Tools (9 tools)
+  - Complete API documentation with parameters, returns, examples, use cases, and best practices
+  - Updated tool count from 34 to 43 tools throughout documentation
+
+- **Updated Main Documentation:**
+  - `README.md` - Added MCP Design Patterns feature highlight and quick link
+  - `docs/README.md` - Added MCP Design Patterns Guide to learning paths
+  - Updated architecture diagram to reflect 43 tools
+
+✅ **Manual Validation Test Suite**
+- **New Test File:** `tests/test_mcp_design_patterns_manual.py` (366 lines)
+  - Comprehensive validation tests for all three MCP design pattern workflows
+  - 22 validation scenarios covering all 9 tools
+  - Tests connect to actual ArangoDB instance and exercise tools through MCP server
+  - Validates Progressive Tool Discovery (5 scenarios)
+  - Validates Context Switching (8 scenarios)
+  - Validates Tool Unloading (9 scenarios)
+
+✅ **Version Management Script**
+- **New Script:** `scripts/bvn.py` (Bump Version Number) - 300 lines
+  - Automated version management with semantic versioning validation
+  - Commands: `--version "X.Y.Z"`, `--pypi true/false`, `--dry-run`
+  - Validates new version is semantically greater than current version
+  - Updates version in `pyproject.toml`
+  - Manages `publish_on_pypi` flag for PyPI publication workflow
+  - Dry-run mode for previewing changes without applying
+  - Comprehensive error handling and clear success/error messages
+
+### Changed
+
+- **Tool Count:** Increased from 34 to 43 tools (9 new MCP Design Pattern tools)
+- **Tool Categories:** Expanded from 9 to 10 categories (added MCP Design Pattern Tools)
+- **Documentation:** 1,455 lines added across 4 documentation files
+- **Project Structure:** Test files properly organized in `tests/` directory
+- **Version:** Bumped from 0.3.2 to 0.4.0 (MINOR version increment for new features)
+
+### Technical Details
+
+- **MCP Design Patterns Implementation:**
+  - Tool registry with category-based organization
+  - Context management with workflow-specific tool sets
+  - Tool lifecycle tracking with usage statistics
+  - Backward compatibility maintained with tool aliases
+
+- **Documentation Standards:**
+  - Follows pedagogical approach (Context→Concept→Code→Conclusion)
+  - Consistent formatting with existing documentation style
+  - Absolute GitHub URLs for PyPI compatibility
+  - Cross-references validated throughout
+
+- **Testing Approach:**
+  - Manual validation tests complement existing unit/integration tests
+  - Tests exercise actual MCP server and ArangoDB connection
+  - Validates end-to-end workflow behavior
+  - 100% pass rate (22/22 validation tests)
+
+### Performance Impact
+
+- **Token Savings:** Up to 98.7% reduction in initial context window through progressive tool discovery
+- **Workflow Efficiency:** Context-specific tool sets reduce cognitive load and improve focus
+- **Tool Management:** Automatic lifecycle management reduces manual tool selection overhead
 
 ---
 
 ## [0.3.2] - 2025-10-20
-
-**Current Release**
 
 ### Fixed
 

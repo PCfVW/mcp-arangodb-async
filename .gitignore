@@ -58,3 +58,4 @@ Thumbs.db
 **/*.pdf
 gitignore/
 graph_backups/
+backups/

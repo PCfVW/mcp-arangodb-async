@@ -841,7 +841,7 @@ Call: arango_get_tool_usage_stats()
 Result: Used 15/43 tools, 28 tools never loaded (65% reduction)
 ```
 
-**Total Token Savings:** ~130,000 tokens (87% reduction) by combining all three patterns
+**Estimated Total Token Savings:** ~130,000 tokens (87% reduction) by combining all three patterns
 
 ---
 

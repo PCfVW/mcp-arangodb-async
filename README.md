@@ -21,6 +21,8 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 
 🎯 **MCP Design Patterns:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/mcp-design-patterns.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/user-guide/mcp-design-patterns.md)
 
+📝 **Changelog:** [https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/changelog.md](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/developer-guide/changelog.md)
+
 🐛 **Issues:** [https://github.com/PCfVW/mcp-arango-async/issues](https://github.com/PCfVW/mcp-arango-async/issues)
 
 ---
@@ -43,13 +45,13 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 ## Architecture
 
 ```
-┌────────────────────┐      ┌─────────────────────┐      ┌──────────────────┐
-│   MCP Client       │      │  ArangoDB MCP       │      │   ArangoDB       │
+┌────────────────────┐      ┌─────────────────────┐       ┌──────────────────┐
+│   MCP Client       │      │  ArangoDB MCP       │       │   ArangoDB       │
 │ (Claude, Augment)  │─────▶│  Server (Python)    │─────▶│  (Docker)        │
-│                    │      │  • 43 Tools         │      │  • Multi-Model   │
-│                    │      │  • Graph Mgmt       │      │  • Graph Engine  │
-│                    │      │  • MCP Patterns     │      │  • AQL Engine    │
-└────────────────────┘      └─────────────────────┘      └──────────────────┘
+│                    │      │  • 43 Tools         │       │  • Multi-Model   │
+│                    │      │  • Graph Mgmt       │       │  • Graph Engine  │
+│                    │      │  • MCP Patterns     │       │  • AQL Engine    │
+└────────────────────┘      └─────────────────────┘       └──────────────────┘
 ```
 
 ---
