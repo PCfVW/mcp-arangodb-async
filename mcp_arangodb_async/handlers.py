@@ -80,6 +80,7 @@ from typing import Any, Dict, List, Optional
 import json
 import logging
 from contextlib import contextmanager
+from datetime import datetime
 from jsonschema import Draft7Validator, ValidationError as JSONSchemaValidationError
 from arango.database import StandardDatabase
 from arango.exceptions import ArangoError
@@ -93,7 +94,7 @@ from .graph_backup import (
     validate_graph_integrity,
     calculate_graph_statistics,
 )
-from .tool_registry import register_tool
+from .tool_registry import register_tool, TOOL_REGISTRY
 from .tools import (
     ARANGO_QUERY,
     ARANGO_LIST_COLLECTIONS,
@@ -129,6 +130,17 @@ from .tools import (
     ARANGO_VALIDATE_GRAPH_INTEGRITY,
     ARANGO_GRAPH_STATISTICS,
     ARANGO_DATABASE_STATUS,
+    # Pattern 1: Progressive Tool Discovery
+    ARANGO_SEARCH_TOOLS,
+    ARANGO_LIST_TOOLS_BY_CATEGORY,
+    # Pattern 2: Context Switching
+    ARANGO_SWITCH_CONTEXT,
+    ARANGO_GET_ACTIVE_CONTEXT,
+    ARANGO_LIST_CONTEXTS,
+    # Pattern 3: Tool Unloading
+    ARANGO_ADVANCE_WORKFLOW_STAGE,
+    ARANGO_GET_TOOL_USAGE_STATS,
+    ARANGO_UNLOAD_TOOLS,
 )
 
 # Configure logger for handlers
@@ -238,6 +250,17 @@ from .models import (
     ValidateGraphIntegrityArgs,
     GraphStatisticsArgs,
     ArangoDatabaseStatusArgs,
+    # Pattern 1: Progressive Tool Discovery
+    SearchToolsArgs,
+    ListToolsByCategoryArgs,
+    # Pattern 2: Context Switching
+    SwitchContextArgs,
+    GetActiveContextArgs,
+    ListContextsArgs,
+    # Pattern 3: Tool Unloading
+    AdvanceWorkflowStageArgs,
+    GetToolUsageStatsArgs,
+    UnloadToolsArgs,
 )
 
 
@@ -1791,8 +1814,160 @@ def handle_arango_database_status(
         }
 
 
+# ============================================================================
+# MCP Design Pattern Tools
+# ============================================================================
+
+# Tool category mappings for Progressive Tool Discovery
+TOOL_CATEGORIES = {
+    "core_data": [
+        ARANGO_QUERY, ARANGO_LIST_COLLECTIONS, ARANGO_INSERT,
+        ARANGO_UPDATE, ARANGO_REMOVE, ARANGO_CREATE_COLLECTION, ARANGO_BACKUP
+    ],
+    "indexing": [
+        ARANGO_LIST_INDEXES, ARANGO_CREATE_INDEX, ARANGO_DELETE_INDEX, ARANGO_EXPLAIN_QUERY
+    ],
+    "validation": [
+        ARANGO_VALIDATE_REFERENCES, ARANGO_INSERT_WITH_VALIDATION,
+        ARANGO_BULK_INSERT, ARANGO_BULK_UPDATE
+    ],
+    "schema": [ARANGO_CREATE_SCHEMA, ARANGO_VALIDATE_DOCUMENT],
+    "query": [ARANGO_QUERY_BUILDER, ARANGO_QUERY_PROFILE],
+    "graph_basic": [
+        ARANGO_CREATE_GRAPH, ARANGO_LIST_GRAPHS, ARANGO_ADD_VERTEX_COLLECTION,
+        ARANGO_ADD_EDGE_DEFINITION, ARANGO_ADD_EDGE, ARANGO_TRAVERSE, ARANGO_SHORTEST_PATH
+    ],
+    "graph_advanced": [
+        ARANGO_BACKUP_GRAPH, ARANGO_RESTORE_GRAPH, ARANGO_BACKUP_NAMED_GRAPHS,
+        ARANGO_VALIDATE_GRAPH_INTEGRITY, ARANGO_GRAPH_STATISTICS
+    ],
+    "aliases": [ARANGO_GRAPH_TRAVERSAL, ARANGO_ADD_VERTEX],
+    "health": [ARANGO_DATABASE_STATUS]
+}
+
+
+# Pattern 1: Progressive Tool Discovery
+@handle_errors
+@register_tool(
+    name=ARANGO_SEARCH_TOOLS,
+    description="Search for MCP tools by keywords and categories. Enables progressive tool discovery by returning only relevant tools instead of loading all 34 tools upfront.",
+    model=SearchToolsArgs,
+)
+def handle_search_tools(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Search for tools matching keywords and optional category filters.
+
+    This tool enables Progressive Tool Discovery pattern by allowing AI agents
+    to search for relevant tools on-demand rather than loading all tools upfront.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: Validated SearchToolsArgs containing keywords, categories, and detail_level
+
+    Returns:
+        Dictionary with matching tools and search metadata
+    """
+    keywords = [kw.lower() for kw in args["keywords"]]
+    categories_filter = args.get("categories")
+    detail_level = args.get("detail_level", "summary")
+
+    # Build list of tools to search
+    tools_to_search = []
+    if categories_filter:
+        for cat in categories_filter:
+            if cat in TOOL_CATEGORIES:
+                tools_to_search.extend(TOOL_CATEGORIES[cat])
+    else:
+        # Search all tools
+        tools_to_search = list(TOOL_REGISTRY.keys())
+
+    # Search for matching tools
+    matches = []
+    for tool_name in tools_to_search:
+        if tool_name not in TOOL_REGISTRY:
+            continue
+
+        tool_reg = TOOL_REGISTRY[tool_name]
+        search_text = f"{tool_reg.name} {tool_reg.description}".lower()
+
+        # Check if any keyword matches
+        if any(keyword in search_text for keyword in keywords):
+            if detail_level == "name":
+                matches.append({"name": tool_reg.name})
+            elif detail_level == "summary":
+                matches.append({
+                    "name": tool_reg.name,
+                    "description": tool_reg.description
+                })
+            else:  # full
+                matches.append({
+                    "name": tool_reg.name,
+                    "description": tool_reg.description,
+                    "inputSchema": tool_reg.model.model_json_schema()
+                })
+
+    return {
+        "matches": matches,
+        "total_matches": len(matches),
+        "keywords": args["keywords"],
+        "categories_searched": categories_filter or "all",
+        "detail_level": detail_level
+    }
+
+
+@handle_errors
+@register_tool(
+    name=ARANGO_LIST_TOOLS_BY_CATEGORY,
+    description="List all MCP tools organized by category. Useful for understanding tool organization and selecting workflow-specific tool sets.",
+    model=ListToolsByCategoryArgs,
+)
+def handle_list_tools_by_category(
+    db: StandardDatabase, args: Dict[str, Any]
+) -> Dict[str, Any]:
+    """List tools organized by category.
+
+    Args:
+        db: ArangoDB database instance (not used, but required for handler signature)
+        args: Validated ListToolsByCategoryArgs with optional category filter
+
+    Returns:
+        Dictionary with tools organized by category
+    """
+    category_filter = args.get("category")
+
+    if category_filter:
+        # Return single category
+        if category_filter not in TOOL_CATEGORIES:
+            return {
+                "error": f"Unknown category: {category_filter}",
+                "available_categories": list(TOOL_CATEGORIES.keys())
+            }
+
+        return {
+            "category": category_filter,
+            "tools": TOOL_CATEGORIES[category_filter],
+            "tool_count": len(TOOL_CATEGORIES[category_filter])
+        }
+    else:
+        # Return all categories
+        result = {
+            "categories": {},
+            "total_tools": 0
+        }
+
+        for cat_name, tool_list in TOOL_CATEGORIES.items():
+            result["categories"][cat_name] = {
+                "tools": tool_list,
+                "count": len(tool_list)
+            }
+            result["total_tools"] += len(tool_list)
+
+        return result
+
+
 # Register aliases for backward compatibility
-from .tool_registry import ToolRegistration, TOOL_REGISTRY
+from .tool_registry import ToolRegistration
 
 # Alias: ARANGO_GRAPH_TRAVERSAL -> handle_traverse
 TOOL_REGISTRY[ARANGO_GRAPH_TRAVERSAL] = ToolRegistration(

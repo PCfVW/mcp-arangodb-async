@@ -414,3 +414,71 @@ class GraphStatisticsArgs(BaseModel):
 class ArangoDatabaseStatusArgs(BaseModel):
     """Arguments for arango_database_status tool (no parameters required)."""
     pass
+
+
+# Pattern 1: Progressive Tool Discovery
+class SearchToolsArgs(BaseModel):
+    """Arguments for arango_search_tools."""
+    keywords: List[str] = Field(
+        description="Keywords to search for in tool names and descriptions"
+    )
+    categories: Optional[List[str]] = Field(
+        default=None,
+        description="Filter by categories: core_data, indexing, validation, schema, query, graph_basic, graph_advanced, aliases, health"
+    )
+    detail_level: Literal["name", "summary", "full"] = Field(
+        default="summary",
+        description="Level of detail: 'name' (just names), 'summary' (names + descriptions), 'full' (complete schemas)"
+    )
+
+
+class ListToolsByCategoryArgs(BaseModel):
+    """Arguments for arango_list_tools_by_category."""
+    category: Optional[str] = Field(
+        default=None,
+        description="Category to filter by. If None, returns all categories with their tools."
+    )
+
+
+# Pattern 2: Context Switching
+class SwitchContextArgs(BaseModel):
+    """Arguments for arango_switch_context."""
+    context: Literal[
+        "baseline", "data_analysis", "graph_modeling",
+        "bulk_operations", "schema_validation", "full"
+    ] = Field(
+        description="Workflow context to switch to"
+    )
+
+
+class GetActiveContextArgs(BaseModel):
+    """Arguments for arango_get_active_context."""
+    pass
+
+
+class ListContextsArgs(BaseModel):
+    """Arguments for arango_list_contexts."""
+    include_tools: bool = Field(
+        default=False,
+        description="Include tool lists for each context"
+    )
+
+
+# Pattern 3: Tool Unloading
+class AdvanceWorkflowStageArgs(BaseModel):
+    """Arguments for arango_advance_workflow_stage."""
+    stage: Literal["setup", "data_loading", "analysis", "cleanup"] = Field(
+        description="Workflow stage to advance to"
+    )
+
+
+class GetToolUsageStatsArgs(BaseModel):
+    """Arguments for arango_get_tool_usage_stats."""
+    pass
+
+
+class UnloadToolsArgs(BaseModel):
+    """Arguments for arango_unload_tools."""
+    tool_names: List[str] = Field(
+        description="List of tool names to unload from active context"
+    )
