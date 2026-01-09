@@ -48,6 +48,42 @@ Note: Starting the server with default stdio (`maa server`) is useful primarily 
 
 4) Use the multi-tenancy tools (refer to the tools reference for parameters): list configured databases, set a focused database, check resolution, or override per-call.
 
+<details>
+<summary>💡 Advanced: Using shorthand aliases</summary>
+
+**Quick configuration with short aliases:**
+```bash
+maa db config add mydb -u http://localhost:8529 -d mydb -U admin -P ARANGO_PASSWORD
+```
+
+**Quick updates with short aliases:**
+```bash
+# Update URL
+maa db config update mydb -u http://new-host:8529
+
+# Rename configuration
+maa db config update mydb -k production
+
+# Update multiple fields
+maa db config update mydb -u http://new-host:8529 -d new_db --timeout 60
+```
+
+**Server startup with config alias:**
+```bash
+maa server -C config/databases.yaml
+```
+
+**Alias reference:**
+- `-u` = `--url`
+- `-d` = `--database`
+- `-U` = `--username`
+- `-k` = `--key` (for renaming)
+- `-P` = `--arango-password-env` / `--pw-env`
+- `-C` = `--config-file` / `--config-path`
+
+See [CLI Reference](cli-reference.md) for complete list.
+</details>
+
 ---
 
 ## Core Concepts

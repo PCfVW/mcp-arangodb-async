@@ -64,3 +64,4 @@ Thumbs.db
 gitignore/
 graph_backups/
 backups/
+config/

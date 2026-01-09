@@ -4,9 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-arangodb-async"
-version = "0.5.0"
+version = "0.5.3"
 description = "A Model Context Protocol server for ArangoDB"
-publish_on_pypi = true  # Set to false to skip publish, Set to true when you want to publish with an increased version number
+publish_on_pypi = false  # Set to false to skip publish, Set to true when you want to publish with an increased version number
 readme = "README.md"
 license = "Apache-2.0"
 authors = [
@@ -102,4 +102,6 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "asyncio: mark test as async",
+]

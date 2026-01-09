@@ -50,7 +50,8 @@ class TestBackupGraphToDir:
                 result = backup_graph_to_dir(mock_db, "test_graph", tmp_dir)
                 
                 assert result["graph_name"] == "test_graph"
-                assert result["output_dir"] == tmp_dir
+                # Normalize paths for comparison (macOS resolves /var to /private/var)
+                assert os.path.realpath(result["output_dir"]) == os.path.realpath(tmp_dir)
                 assert result["total_vertex_collections"] == 2  # users, posts
                 assert result["total_edge_collections"] == 1   # follows
                 assert result["total_documents"] == 30  # 3 collections * 10 docs

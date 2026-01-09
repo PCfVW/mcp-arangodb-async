@@ -68,7 +68,8 @@ maa
 │   │   ├── remove      # Remove database from YAML
 │   │   ├── list        # List configured databases
 │   │   ├── test        # Test database connection
-│   │   └── status      # Show resolution status
+│   │   ├── status      # Show resolution status
+│   │   └── update      # Update database configuration
 │   ├── add             # Create ArangoDB database
 │   ├── remove          # Delete ArangoDB database
 │   └── list            # List ArangoDB databases
@@ -98,16 +99,18 @@ maa server \
   [--host <host>] \
   [--port <port>] \
   [--stateless] \
-  [--<config-file|cfgf> <path>]
+  [--config-file <path>]
 ```
 
-**Parameters:**
+**Arguments:**
 
-- `--transport` - Transport type: `stdio` or `http` (default: `stdio`, or from `MCP_TRANSPORT` env var)
-- `--host` - HTTP host address (default: `0.0.0.0`, or from `MCP_HTTP_HOST` env var). Only applies to HTTP transport.
-- `--port` - HTTP port number (default: `8000`, or from `MCP_HTTP_PORT` env var). Only applies to HTTP transport.
-- `--stateless` - Enable stateless mode for HTTP transport. In stateless mode, each request is independent.
-- `--config-file` or `-cfgf` - Path to database configuration YAML file (default: `ARANGO_DATABASES_CONFIG_FILE` env var, or `config/databases.yaml`)
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `--config-file` | `--config-path`, `--cfgf`, `--cfgp`, `-C` | Path to database configuration YAML file (default: `ARANGO_DATABASES_CONFIG_FILE` env var, or `config/databases.yaml`) |
+| `--transport` | - | Transport type: `stdio` or `http` (default: `stdio`, or from `MCP_TRANSPORT` env var) |
+| `--host` | - | HTTP host address (default: `0.0.0.0`, or from `MCP_HTTP_HOST` env var). Only applies to HTTP transport |
+| `--port` | - | HTTP port number (default: `8000`, or from `MCP_HTTP_PORT` env var). Only applies to HTTP transport |
+| `--stateless` | - | Enable stateless mode for HTTP transport. In stateless mode, each request is independent |
 
 **Transport Types:**
 
@@ -173,26 +176,28 @@ maa db config add <key> \
   --url <url> \
   --database <database> \
   --username <username> \
-  --password-env <env_var> \
+  --arango-password-env <env_var> \
   [--timeout <seconds>] \
   [--description <text>] \
-  [--config-path <path>] \
+  [--config-file <path>] \
   [--dry-run] \
   [--yes]
 ```
 
-**Parameters:**
+**Arguments:**
 
-- `key` - Unique identifier for this configuration
-- `--url` - ArangoDB server URL (e.g., `http://localhost:8529`)
-- `--database` - Database name
-- `--username` - Username for authentication
-- `--password-env` - Environment variable name containing password
-- `--timeout` - Connection timeout in seconds (default: 30.0)
-- `--description` - Optional description
-- `--config-path` - Path to YAML file (default: `config/databases.yaml`)
-- `--dry-run` - Preview without executing
-- `--yes` / `-y` - Skip confirmation
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<key>` | - | Unique identifier for this configuration |
+| `--url` | `-u` | ArangoDB server URL (e.g., `http://localhost:8529`) |
+| `--database` | `-d` | Database name |
+| `--username` | `-U` | Username for authentication |
+| `--arango-password-env` | `--password-env`, `--pw-env`, `-P` | Environment variable name containing password |
+| `--timeout` | - | Connection timeout in seconds (default: 30.0) |
+| `--description` | - | Optional description |
+| `--config-file` | `--config-path`, `--cfgf`, `--cfgp`, `-C` | Path to YAML file (default: `config/databases.yaml`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Example:**
 
@@ -216,12 +221,21 @@ Remove a database configuration from YAML file.
 
 ```bash
 maa db config remove <key> \
-  [--config-path <path>] \
+  [--config-file <path>] \
   [--dry-run] \
   [--yes]
 ```
 
 **Aliases:** `rm`
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<key>` | - | Configuration key to remove |
+| `--config-file` | `--config-path`, `--cfgf`, `--cfgp`, `-C` | Path to YAML file (default: `config/databases.yaml`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Example:**
 
@@ -238,10 +252,16 @@ List all configured databases from YAML file.
 **Syntax:**
 
 ```bash
-maa db config list [--config-path <path>]
+maa db config list [--config-file <path>]
 ```
 
 **Aliases:** `ls`
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `--config-file` | `--config-path`, `--cfgf`, `--cfgp`, `-C` | Path to YAML file (default: `config/databases.yaml`) |
 
 **Example:**
 
@@ -259,6 +279,100 @@ Default database: production
   production:
     URL: http://localhost:8529
     Database: myapp_prod
+```
+
+--- 
+
+### db config update
+
+Update an existing database configuration in YAML file.
+
+**Syntax:**
+
+```bash
+maa db config update <existing-key> 
+  [--key <new-key>] 
+  [--url <url>] 
+  [--database <database>] 
+  [--username <username>] 
+  [--arango-password-env <env_var>] 
+  [--timeout <seconds>] 
+  [--description <text>] 
+  [--config-file <path>] 
+  [--dry-run] 
+  [--yes]
+```
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<existing-key>` | - | Existing database key to update |
+| `--key` | `-k` | New database key (rename the configuration) |
+| `--url` | `-u` | ArangoDB server URL (e.g., `http://localhost:8529`) |
+| `--database` | `-d` | Database name |
+| `--username` | `-U` | Username for authentication |
+| `--arango-password-env` | `--password-env`, `--pw-env`, `-P` | Environment variable name containing password |
+| `--timeout` | - | Connection timeout in seconds |
+| `--description` | - | Optional description (use empty string to clear) |
+| `--config-file` | `--config-path`, `--cfgf`, `--cfgp`, `-C` | Path to YAML file (default: `config/databases.yaml`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
+
+**Output Format:**
+
+Changes are displayed with before/after values:
+
+```
+[UPDATED] Database configuration 'production'
+  Key: production → prod
+  URL: http://localhost:8529 → http://new-host:8529
+  Database: prod_db → new_db
+  Username: admin → newuser
+  Password Env: PROD_PASSWORD → NEW_PASSWORD
+  Timeout: 30.0 → 60.0
+  Description: Production database → Updated description
+```
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Error (validation failed, file error, etc.) |
+| 2 | Cancelled (user declined confirmation) |
+
+**Examples:**
+
+```bash
+# Update URL only
+maa db config update production --url http://new-host:8529
+
+# Rename key only (long form)
+maa db config update production --key prod
+
+# Rename key only (short form)
+maa db config update production -k prod
+
+# Rename key and update fields
+maa db config update production -k prod --url http://new-host:8529 --timeout 60
+
+# Update multiple fields
+maa db config update production \
+  --url http://staging:8529 \
+  --database staging_db \
+  --timeout 45 \
+  --description "Staging environment"
+
+# Clear description (use empty string)
+maa db config update production --description ""
+
+# Dry-run mode (preview changes)
+maa db config update production --url http://new:8529 --dry-run
+
+# Skip confirmation
+maa db config update production --url http://new:8529 --yes
+```
     Username: admin
     Password env: ARANGO_PASSWORD
     Timeout: 60.0s
@@ -282,8 +396,15 @@ Test connection to a configured database.
 **Syntax:**
 
 ```bash
-maa db config test <key> [--config-path <path>]
+maa db config test <key> [--config-file <path>]
 ```
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<key>` | - | Configuration key to test |
+| `--config-file` | `--config-path`, `--cfgf`, `--cfgp`, `-C` | Path to YAML file (default: `config/databases.yaml`) |
 
 **Example:**
 
@@ -318,8 +439,14 @@ Show database resolution status and configuration overview.
 **Syntax:**
 
 ```bash
-maa db config status [--config-path <path>]
+maa db config status [--config-file <path>]
 ```
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `--config-file` | `--config-path`, `--cfgf`, `--cfgp`, `-C` | Path to YAML file (default: `config/databases.yaml`) |
 
 **Example:**
 
@@ -366,24 +493,26 @@ maa db add <name> \
   [--with-user <username>] \
   [--permission <rw|ro|none>] \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--arango-password-env <var>] \
   [--dry-run] \
   [--yes]
 ```
 
-**Parameters:**
+**Arguments:**
 
-- `name` - Database name to create
-- `--with-user` - Username to grant access (creates user if not exists)
-- `--permission` - Permission level: `rw`, `ro`, `none` (default: `rw`)
-- `--url` - ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`)
-- `--env-file` - Path to .env file for credentials
-- `--arango-root-password-env` - Root password env var (default: `ARANGO_ROOT_PASSWORD`)
-- `--arango-password-env` - User password env var (default: `ARANGO_PASSWORD`)
-- `--dry-run` - Preview without executing
-- `--yes` / `-y` - Skip confirmation
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<name>` | - | Database name to create |
+| `--with-user` | - | Username to grant access (creates user if not exists) |
+| `--permission` | `--perm`, `-p` | Permission level: `rw`, `ro`, `none` (default: `rw`) |
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--arango-password-env` | `--password-env`, `--pw-env`, `-P` | User password env var (default: `ARANGO_PASSWORD`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Example (Simple):**
 
@@ -422,13 +551,24 @@ Delete an ArangoDB database.
 ```bash
 maa db remove <name> \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--dry-run] \
   [--yes]
 ```
 
 **Aliases:** `rm`
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<name>` | - | Database name to delete |
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Safety:** Cannot delete `_system` database.
 
@@ -462,12 +602,21 @@ List all ArangoDB databases.
 ```bash
 maa db list \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--json]
 ```
 
 **Aliases:** `ls`
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--json` | - | Output in JSON format |
 
 **Example:**
 
@@ -513,23 +662,25 @@ Create a new ArangoDB user (admin operation).
 maa user add <username> \
   [--active] \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--arango-password-env <var>] \
   [--dry-run] \
   [--yes]
 ```
 
-**Parameters:**
+**Arguments:**
 
-- `username` - Username to create
-- `--active` - User is active (default: true)
-- `--url` - ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`)
-- `--env-file` - Path to .env file
-- `--arango-root-password-env` - Root password env var (default: `ARANGO_ROOT_PASSWORD`)
-- `--arango-password-env` - User password env var (default: `ARANGO_PASSWORD`)
-- `--dry-run` - Preview without executing
-- `--yes` / `-y` - Skip confirmation
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<username>` | - | Username to create |
+| `--active` | - | User is active (default: true) |
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--arango-password-env` | `--password-env`, `--pw-env`, `-P` | User password env var (default: `ARANGO_PASSWORD`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Example:**
 
@@ -551,13 +702,24 @@ Delete an ArangoDB user (admin operation).
 ```bash
 maa user remove <username> \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--dry-run] \
   [--yes]
 ```
 
 **Aliases:** `rm`
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<username>` | - | Username to delete |
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Safety:** Cannot delete `root` user.
 
@@ -579,12 +741,21 @@ List all ArangoDB users (admin operation).
 ```bash
 maa user list \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--json]
 ```
 
 **Aliases:** `ls`
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--json` | - | Output in JSON format |
 
 **Example:**
 
@@ -614,17 +785,24 @@ Grant database permissions to a user (admin operation).
 maa user grant <username> <database> \
   [--permission <rw|ro|none>] \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--dry-run] \
   [--yes]
 ```
 
-**Parameters:**
+**Arguments:**
 
-- `username` - Username to grant permissions to
-- `database` - Database name
-- `--permission` - Permission level: `rw`, `ro`, `none` (default: `rw`)
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<username>` | - | Username to grant permissions to |
+| `<database>` | - | Database name |
+| `--permission` | `--perm`, `-p` | Permission level: `rw`, `ro`, `none` (default: `rw`) |
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Permission Levels:**
 - `rw` - Read-write access (full CRUD operations)
@@ -649,11 +827,23 @@ Revoke database permissions from a user (admin operation).
 ```bash
 maa user revoke <username> <database> \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-root-password-env <var>] \
   [--dry-run] \
   [--yes]
 ```
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `<username>` | - | Username to revoke permissions from |
+| `<database>` | - | Database name |
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-root-password-env` | `--root-pw-env`, `-R` | Root password env var (default: `ARANGO_ROOT_PASSWORD`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Example:**
 
@@ -673,10 +863,19 @@ List databases accessible to current user (self-service operation).
 ```bash
 maa user databases \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-password-env <var>] \
   [--json]
 ```
+
+**Arguments:**
+
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-password-env` | `--password-env`, `--pw-env`, `-P` | User password env var (default: `ARANGO_PASSWORD`) |
+| `--json` | - | Output in JSON format |
 
 **Note:** Uses current user's credentials (not root).
 
@@ -708,17 +907,23 @@ Change current user's password (self-service operation).
 ```bash
 maa user password \
   [--url <url>] \
-  [--env-file <path>] \
+  [--environment-file <path>] \
   [--arango-password-env <var>] \
-  [--new-password-env <var>] \
+  [--arango-new-password-env <var>] \
   [--dry-run] \
   [--yes]
 ```
 
-**Parameters:**
+**Arguments:**
 
-- `--arango-password-env` - Current password env var (default: `ARANGO_PASSWORD`)
-- `--new-password-env` - New password env var (default: `ARANGO_NEW_PASSWORD`)
+| Argument | Aliases | Description |
+|----------|---------|-------------|
+| `--url` | `-u` | ArangoDB URL (default: `ARANGO_URL` env or `http://localhost:8529`) |
+| `--environment-file` | `--env-file`, `--envf`, `-E` | Path to .env file for credentials |
+| `--arango-password-env` | `--password-env`, `--pw-env`, `-P` | Current password env var (default: `ARANGO_PASSWORD`) |
+| `--arango-new-password-env` | `--new-password-env`, `--new-pw-env`, `-N` | New password env var (default: `ARANGO_NEW_PASSWORD`) |
+| `--dry-run` | - | Preview without executing |
+| `--yes` | `-y` | Skip confirmation |
 
 **Example:**
 

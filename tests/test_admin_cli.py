@@ -152,10 +152,10 @@ class TestDBConfig:
             url="http://localhost:8529",
             database="test",
             username="testuser",
-            password_env="TEST_PASSWORD",
+            arango_password_env="TEST_PASSWORD",
             timeout=30.0,
             description="Test database",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
@@ -178,10 +178,10 @@ class TestDBConfig:
             url="http://localhost:8529",
             database="test",
             username="testuser",
-            password_env="TEST_PASSWORD",
+            arango_password_env="TEST_PASSWORD",
             timeout=30.0,
             description="Test database",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
@@ -193,10 +193,10 @@ class TestDBConfig:
             url="http://localhost:8529",
             database="test2",
             username="testuser2",
-            password_env="TEST_PASSWORD2",
+            arango_password_env="TEST_PASSWORD2",
             timeout=30.0,
             description="Duplicate",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
@@ -215,10 +215,10 @@ class TestDBConfig:
             url="http://localhost:8529",
             database="test",
             username="testuser",
-            password_env="TEST_PASSWORD",
+            arango_password_env="TEST_PASSWORD",
             timeout=30.0,
             description="Test database",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
@@ -227,7 +227,7 @@ class TestDBConfig:
         # Remove it
         args_remove = Namespace(
             key="testdb",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
@@ -247,17 +247,17 @@ class TestDBConfig:
                 url="http://localhost:8529",
                 database=f"test{i}",
                 username="testuser",
-                password_env="TEST_PASSWORD",
+                arango_password_env="TEST_PASSWORD",
                 timeout=30.0,
                 description=f"Database {i}",
-                config_path=str(config_path),
+                config_file=str(config_path),
                 dry_run=False,
                 yes=True,
             )
             cli_db.handle_add(args)
 
         # List them
-        args_list = Namespace(config_path=str(config_path))
+        args_list = Namespace(config_file=str(config_path))
         result = cli_db.handle_list(args_list)
         assert result == EXIT_SUCCESS
 
@@ -278,10 +278,10 @@ class TestDBConfig:
             url="http://localhost:8529",
             database="test",
             username="testuser",
-            password_env="TEST_PASSWORD",
+            arango_password_env="TEST_PASSWORD",
             timeout=30.0,
             description="Test database",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
@@ -305,7 +305,7 @@ class TestDBConfig:
 
             args_test = Namespace(
                 key="testdb",
-                config_path=str(config_path),
+                config_file=str(config_path),
             )
             result = cli_db.handle_test(args_test)
             assert result == EXIT_SUCCESS
@@ -325,10 +325,10 @@ class TestDBConfig:
             url="http://localhost:8529",
             database="test",
             username="testuser",
-            password_env="TEST_PASSWORD",
+            arango_password_env="TEST_PASSWORD",
             timeout=30.0,
             description="Test database",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
@@ -343,7 +343,7 @@ class TestDBConfig:
 
             args_test = Namespace(
                 key="testdb",
-                config_path=str(config_path),
+                config_file=str(config_path),
             )
             result = cli_db.handle_test(args_test)
             assert result == EXIT_ERROR
@@ -363,19 +363,58 @@ class TestDBConfig:
             url="http://localhost:8529",
             database="test",
             username="testuser",
-            password_env="TEST_PASSWORD",
+            arango_password_env="TEST_PASSWORD",
             timeout=30.0,
             description="Test database",
-            config_path=str(config_path),
+            config_file=str(config_path),
             dry_run=False,
             yes=True,
         )
         cli_db.handle_add(args_add)
 
         # Get status
-        args_status = Namespace(config_path=str(config_path))
+        args_status = Namespace(config_file=str(config_path))
         result = cli_db.handle_status(args_status)
         assert result == EXIT_SUCCESS
+
+    def test_config_add_password_env_backward_compat(self, temp_config_dir):
+        """Verify --password-env backward compatibility in db config add."""
+        import subprocess
+        import yaml
+
+        config_path = Path(temp_config_dir) / "databases.yaml"
+
+        # Test using OLD argument name (--password-env) via CLI
+        result = subprocess.run(
+            [
+                "maa",
+                "db",
+                "config",
+                "add",
+                "testdb",
+                "--url",
+                "http://localhost:8529",
+                "--database",
+                "test",
+                "--username",
+                "testuser",
+                "--password-env",  # OLD name (backward compat)
+                "TEST_PASSWORD",
+                "--config-file",
+                str(config_path),
+                "--yes",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.returncode == 0
+
+        # Verify config was created correctly
+        assert config_path.exists()
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+        assert config["databases"]["testdb"]["password_env"] == "TEST_PASSWORD"
 
 
 # ============================================================================
@@ -843,6 +882,31 @@ class TestUserAdmin:
 
         del os.environ["ARANGO_PASSWORD"]
         del os.environ["ARANGO_NEW_PASSWORD"]
+
+    def test_user_password_new_password_env_backward_compat(
+        self, mock_arango_client_user, mock_sys_db, capsys
+    ):
+        """Verify --new-password-env backward compatibility in user password."""
+        mock_sys_db.has_user.return_value = True
+
+        args = Namespace(
+            env_file=None,
+            arango_password_env=None,
+            new_password_env="NEW_PASSWORD",  # OLD name (backward compat)
+            dry_run=False,
+            yes=True,
+        )
+
+        os.environ["ARANGO_PASSWORD"] = "oldpass"
+        os.environ["NEW_PASSWORD"] = "newpass"
+
+        result = cli_user.handle_user_password(args)
+        assert result == EXIT_SUCCESS
+
+        mock_sys_db.update_user.assert_called_once()
+
+        del os.environ["ARANGO_PASSWORD"]
+        del os.environ["NEW_PASSWORD"]
 
 
 # ============================================================================

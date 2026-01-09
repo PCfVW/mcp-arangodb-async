@@ -53,7 +53,8 @@ def test_backup_all_non_system_collections_and_counts():
     })
     with TemporaryDirectory() as tmp:
         report = backup_collections_to_dir(db, output_dir=tmp)
-        assert report["output_dir"] == tmp
+        # Normalize paths for comparison (macOS resolves /var to /private/var)
+        assert os.path.realpath(report["output_dir"]) == os.path.realpath(tmp)
         written = {w["collection"]: w for w in report["written"]}
         assert set(written.keys()) == {"users", "posts"}
         assert written["users"]["count"] == 2

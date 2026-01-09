@@ -311,10 +311,10 @@ class TestServerLifespan:
     """Test server lifespan management."""
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.load_config')
-    @patch('mcp_arangodb_async.entry.get_client_and_db')
     @patch('mcp_arangodb_async.entry.ConfigFileLoader')
-    async def test_server_lifespan_success(self, mock_config_loader_class, mock_get_client, mock_load_config):
+    @patch('mcp_arangodb_async.entry.MultiDatabaseConnectionManager')
+    @patch('mcp_arangodb_async.entry.resolve_database')
+    async def test_server_lifespan_success(self, mock_resolve_database, mock_db_manager_class, mock_config_loader_class):
         """Test successful server lifespan initialization."""
         from mcp_arangodb_async.entry import server_lifespan
         
@@ -324,12 +324,18 @@ class TestServerLifespan:
         mock_config_loader.config_path = "config/databases.yaml"
         mock_config_loader_class.return_value = mock_config_loader
         
-        # Setup mocks
-        mock_config = Mock()
-        mock_load_config.return_value = mock_config
+        # Setup MultiDatabaseConnectionManager mock
+        mock_db_manager = Mock()
         mock_client = Mock()
         mock_db = Mock()
-        mock_get_client.return_value = (mock_client, mock_db)
+        # Make all async methods awaitable
+        mock_db_manager.get_connection = AsyncMock(return_value=(mock_client, mock_db))
+        mock_db_manager.initialize = AsyncMock()
+        mock_db_manager.close_all = AsyncMock()
+        mock_db_manager_class.return_value = mock_db_manager
+        
+        # Setup resolve_database mock
+        mock_resolve_database.return_value = "default"
         
         # Test lifespan context manager
         async with server_lifespan(server) as context:
@@ -365,10 +371,10 @@ class TestServerLifespan:
             assert context["client"] is None
 
     @pytest.mark.asyncio
-    @patch('mcp_arangodb_async.entry.load_config')
-    @patch('mcp_arangodb_async.entry.get_client_and_db')
     @patch('mcp_arangodb_async.entry.ConfigFileLoader')
-    async def test_server_lifespan_retry_logic(self, mock_config_loader_class, mock_get_client, mock_load_config):
+    @patch('mcp_arangodb_async.entry.MultiDatabaseConnectionManager')
+    @patch('mcp_arangodb_async.entry.resolve_database')
+    async def test_server_lifespan_retry_logic(self, mock_resolve_database, mock_db_manager_class, mock_config_loader_class):
         """Test server lifespan retry logic."""
         from mcp_arangodb_async.entry import server_lifespan
         
@@ -378,17 +384,23 @@ class TestServerLifespan:
         mock_config_loader.config_path = "config/databases.yaml"
         mock_config_loader_class.return_value = mock_config_loader
         
-        # Setup mocks
-        mock_config = Mock()
-        mock_load_config.return_value = mock_config
+        # Setup MultiDatabaseConnectionManager mock
+        mock_db_manager = Mock()
         mock_client = Mock()
         mock_db = Mock()
         
         # First call fails, second succeeds
-        mock_get_client.side_effect = [
+        mock_db_manager.get_connection = AsyncMock(side_effect=[
             Exception("First attempt failed"),
             (mock_client, mock_db)
-        ]
+        ])
+        # Make other async methods awaitable
+        mock_db_manager.initialize = AsyncMock()
+        mock_db_manager.close_all = AsyncMock()
+        mock_db_manager_class.return_value = mock_db_manager
+        
+        # Setup resolve_database mock
+        mock_resolve_database.return_value = "default"
         
         with patch.dict('os.environ', {'ARANGO_CONNECT_RETRIES': '2', 'ARANGO_CONNECT_DELAY_SEC': '0.01'}):
             async with server_lifespan(server) as context:
@@ -396,7 +408,7 @@ class TestServerLifespan:
                 assert context["client"] == mock_client
 
         # Verify retry happened
-        assert mock_get_client.call_count == 2
+        assert mock_db_manager.get_connection.call_count == 2
 
 
 class TestMCPDesignPatternToolsIntegration:

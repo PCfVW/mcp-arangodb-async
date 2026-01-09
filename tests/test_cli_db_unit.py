@@ -12,6 +12,7 @@ from mcp_arangodb_async.cli_db import (
     handle_list,
     handle_test,
     handle_status,
+    handle_update,
 )
 from mcp_arangodb_async.multi_db_manager import DatabaseConfig
 
@@ -36,10 +37,10 @@ class TestCLIAdd:
             url="http://localhost:8529",
             database="prod_db",
             username="admin",
-            password_env="PROD_PASSWORD",
+            arango_password_env="PROD_PASSWORD",
             timeout=60.0,
             description="Production database",
-            config_path=self.config_path,
+            config_file=self.config_path,
             dry_run=False,
             yes=True,  # Skip confirmation prompt
         )
@@ -72,10 +73,10 @@ class TestCLIAdd:
             url="http://staging:8529",
             database="staging_db",
             username="admin",
-            password_env="STAGING_PASSWORD",
+            arango_password_env="STAGING_PASSWORD",
             timeout=30.0,
             description=None,
-            config_path=self.config_path,
+            config_file=self.config_path,
             dry_run=False,
             yes=True,  # Skip confirmation prompt
         )
@@ -111,10 +112,10 @@ class TestCLIAdd:
             url="http://new:8529",
             database="new_db",
             username="admin",
-            password_env="NEW_PASSWORD",
+            arango_password_env="NEW_PASSWORD",
             timeout=30.0,
             description=None,
-            config_path=self.config_path,
+            config_file=self.config_path,
             dry_run=False,
             yes=True,  # Skip confirmation prompt
         )
@@ -133,10 +134,10 @@ class TestCLIAdd:
             url="http://localhost:8529",
             database="test_db",
             username="admin",
-            password_env="TEST_PASSWORD",
+            arango_password_env="TEST_PASSWORD",
             timeout=30.0,
             description=None,
-            config_path="/invalid/path/databases.yaml",
+            config_file="/invalid/path/databases.yaml",
             dry_run=False,
             yes=True,  # Skip confirmation prompt
         )
@@ -189,7 +190,7 @@ class TestCLIRemove:
 
         args = Namespace(
             key="production",
-            config_path=self.config_path,
+            config_file=self.config_path,
             dry_run=False,
             yes=True,  # Skip confirmation prompt
         )
@@ -219,7 +220,7 @@ class TestCLIRemove:
 
         args = Namespace(
             key="nonexistent",
-            config_path=self.config_path,
+            config_file=self.config_path,
             dry_run=False,
             yes=True,  # Skip confirmation prompt
         )
@@ -234,7 +235,7 @@ class TestCLIRemove:
         """Test error handling when removing database fails."""
         args = Namespace(
             key="test",
-            config_path="/invalid/path/databases.yaml",
+            config_file="/invalid/path/databases.yaml",
             dry_run=False,
             yes=True,  # Skip confirmation prompt
         )
@@ -289,7 +290,7 @@ class TestCLIList:
         with open(self.config_path, 'w') as f:
             yaml.dump(config_data, f)
 
-        args = Namespace(config_path=self.config_path)
+        args = Namespace(config_file=self.config_path)
 
         result = handle_list(args)
 
@@ -312,7 +313,7 @@ class TestCLIList:
         with open(self.config_path, 'w') as f:
             yaml.dump(config_data, f)
 
-        args = Namespace(config_path=self.config_path)
+        args = Namespace(config_file=self.config_path)
 
         result = handle_list(args)
 
@@ -324,7 +325,7 @@ class TestCLIList:
         """Test listing when config file doesn't exist - uses env var fallback."""
         # Use a path that doesn't exist
         nonexistent_config = os.path.join(self.temp_dir, "nonexistent", "databases.yaml")
-        args = Namespace(config_path=nonexistent_config)
+        args = Namespace(config_file=nonexistent_config)
 
         # Environment variables provide default config (graceful degradation)
         with patch.dict(os.environ, {
@@ -351,7 +352,7 @@ class TestCLIList:
         """Test listing when config file doesn't exist - uses default env values."""
         # Use a path that doesn't exist
         nonexistent_config = os.path.join(self.temp_dir, "nonexistent", "databases.yaml")
-        args = Namespace(config_path=nonexistent_config)
+        args = Namespace(config_file=nonexistent_config)
 
         result = handle_list(args)
 
@@ -366,7 +367,7 @@ class TestCLIList:
 
     def test_list_databases_error_handling(self, capsys):
         """Test error handling when listing databases fails."""
-        args = Namespace(config_path="/invalid/path/databases.yaml")
+        args = Namespace(config_file="/invalid/path/databases.yaml")
 
         with patch("mcp_arangodb_async.cli_db.ConfigFileLoader") as mock_loader:
             mock_loader.return_value.load.side_effect = Exception("Test error")
@@ -409,15 +410,21 @@ class TestCLITest:
 
         args = Namespace(
             key="production",
-            config_path=self.config_path,
+            config_file=self.config_path,
         )
 
         # Mock the async test_connection method
         with patch("mcp_arangodb_async.cli_db.asyncio.run") as mock_run:
-            mock_run.return_value = {
-                "connected": True,
-                "version": "3.11.0"
-            }
+            def run_mock(coro):
+                # Close the coroutine to avoid warnings
+                if hasattr(coro, 'close'):
+                    coro.close()
+                return {
+                    "connected": True,
+                    "version": "3.11.0"
+                }
+            
+            mock_run.side_effect = run_mock
             result = handle_test(args)
 
         assert result == 0
@@ -444,15 +451,21 @@ class TestCLITest:
 
         args = Namespace(
             key="production",
-            config_path=self.config_path,
+            config_file=self.config_path,
         )
 
         # Mock the async test_connection method
         with patch("mcp_arangodb_async.cli_db.asyncio.run") as mock_run:
-            mock_run.return_value = {
-                "connected": False,
-                "error": "Connection refused"
-            }
+            def run_mock(coro):
+                # Close the coroutine to avoid warnings
+                if hasattr(coro, 'close'):
+                    coro.close()
+                return {
+                    "connected": False,
+                    "error": "Connection refused"
+                }
+            
+            mock_run.side_effect = run_mock
             result = handle_test(args)
 
         assert result == 1
@@ -470,7 +483,7 @@ class TestCLITest:
 
         args = Namespace(
             key="nonexistent",
-            config_path=self.config_path,
+            config_file=self.config_path,
         )
 
         result = handle_test(args)
@@ -483,7 +496,7 @@ class TestCLITest:
         """Test error handling when testing connection fails."""
         args = Namespace(
             key="test",
-            config_path="/invalid/path/databases.yaml",
+            config_file="/invalid/path/databases.yaml",
         )
 
         with patch("mcp_arangodb_async.cli_db.ConfigFileLoader") as mock_loader:
@@ -532,7 +545,7 @@ class TestCLIStatus:
         with open(self.config_path, 'w') as f:
             yaml.dump(config_data, f)
 
-        args = Namespace(config_path=self.config_path)
+        args = Namespace(config_file=self.config_path)
 
         result = handle_status(args)
 
@@ -563,7 +576,7 @@ class TestCLIStatus:
         with open(self.config_path, 'w') as f:
             yaml.dump(config_data, f)
 
-        args = Namespace(config_path=self.config_path)
+        args = Namespace(config_file=self.config_path)
 
         result = handle_status(args)
 
@@ -573,7 +586,7 @@ class TestCLIStatus:
 
     def test_status_error_handling(self, capsys):
         """Test error handling when showing status fails."""
-        args = Namespace(config_path="/invalid/path/databases.yaml")
+        args = Namespace(config_file="/invalid/path/databases.yaml")
 
         with patch("mcp_arangodb_async.cli_db.ConfigFileLoader") as mock_loader:
             mock_loader.return_value.load.side_effect = Exception("Test error")
@@ -583,3 +596,596 @@ class TestCLIStatus:
         captured = capsys.readouterr()
         assert "Error showing status" in captured.err
 
+
+
+class TestCLIUpdate:
+    """Test 'db config update' subcommand."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.config_path = os.path.join(self.temp_dir, "databases.yaml")
+
+    def teardown_method(self):
+        """Clean up test fixtures."""
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_update_fields_success(self, capsys):
+        """Test field updates: single field, multiple fields, optional fields."""
+        # Create initial configuration
+        config_data = {
+            "default_database": "production",
+            "databases": {
+                "production": {
+                    "url": "http://localhost:8529",
+                    "database": "prod_db",
+                    "username": "admin",
+                    "password_env": "PROD_PASSWORD",
+                    "timeout": 30.0,
+                    "description": "Production database"
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Test 1: Update single field (URL)
+        args = Namespace(
+            existing_key="production",
+            key=None,
+            url="http://new-host:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "[UPDATED]" in captured.out
+        assert "URL: http://localhost:8529 → http://new-host:8529" in captured.out
+
+        # Verify file was updated
+        with open(self.config_path, 'r') as f:
+            updated_config = yaml.safe_load(f)
+        assert updated_config["databases"]["production"]["url"] == "http://new-host:8529"
+        assert updated_config["databases"]["production"]["database"] == "prod_db"  # Unchanged
+
+        # Test 2: Update multiple fields (URL + timeout + description)
+        args = Namespace(
+            existing_key="production",
+            key=None,
+            url="http://staging:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=45.0,
+            description="Updated production",
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "URL: http://new-host:8529 → http://staging:8529" in captured.out
+        assert "Timeout: 30.0 → 45.0" in captured.out
+        # After Test 1, description was preserved (not changed), so it shows existing value
+        assert "Description: Production database → Updated production" in captured.out
+
+        # Test 3: Update optional field (description value → None)
+        # Note: We need to explicitly pass an empty string or use a special value
+        # to indicate we want to clear the description
+        args = Namespace(
+            existing_key="production",
+            key=None,
+            url=None,
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description="",  # Empty string to clear description
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Description: Updated production → (not set)" in captured.out
+
+        # Verify description was removed
+        with open(self.config_path, 'r') as f:
+            updated_config = yaml.safe_load(f)
+        assert "description" not in updated_config["databases"]["production"]
+
+    def test_update_key_renaming(self, capsys):
+        """Test key renaming: key-only and key+fields, including aliases."""
+        # Create initial configuration
+        config_data = {
+            "default_database": "production",
+            "databases": {
+                "production": {
+                    "url": "http://localhost:8529",
+                    "database": "prod_db",
+                    "username": "admin",
+                    "password_env": "PROD_PASSWORD",
+                    "timeout": 30.0,
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Test 1: Rename key only (production → prod)
+        args = Namespace(
+            existing_key="production",
+            key="prod",
+            url=None,
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Key: production → prod" in captured.out
+
+        # Verify key was renamed
+        with open(self.config_path, 'r') as f:
+            updated_config = yaml.safe_load(f)
+        assert "prod" in updated_config["databases"]
+        assert "production" not in updated_config["databases"]
+        assert updated_config["default_database"] == "prod"  # Default updated
+
+        # Test 2: Rename key with field updates (prod → staging + URL change)
+        args = Namespace(
+            existing_key="prod",
+            key="staging",
+            url="http://staging:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Key: prod → staging" in captured.out
+        assert "URL: http://localhost:8529 → http://staging:8529" in captured.out
+
+        # Test 3: Test -k short alias
+        # Add another database for this test
+        config_data = {
+            "default_database": "staging",
+            "databases": {
+                "staging": {
+                    "url": "http://staging:8529",
+                    "database": "staging_db",
+                    "username": "admin",
+                    "password_env": "STAGING_PASSWORD",
+                    "timeout": 30.0,
+                },
+                "dev": {
+                    "url": "http://dev:8529",
+                    "database": "dev_db",
+                    "username": "admin",
+                    "password_env": "DEV_PASSWORD",
+                    "timeout": 30.0,
+                }
+            }
+        }
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Use -k alias
+        args = Namespace(
+            existing_key="dev",
+            key="development",  # Using -k alias in CLI would be: dev -k development
+            url=None,
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Key: dev → development" in captured.out
+
+    def test_update_default_database_scenarios(self, capsys):
+        """Test default database reference handling during key rename."""
+        # Create initial configuration with default database
+        config_data = {
+            "default_database": "production",
+            "databases": {
+                "production": {
+                    "url": "http://localhost:8529",
+                    "database": "prod_db",
+                    "username": "admin",
+                    "password_env": "PROD_PASSWORD",
+                    "timeout": 30.0,
+                },
+                "staging": {
+                    "url": "http://staging:8529",
+                    "database": "staging_db",
+                    "username": "admin",
+                    "password_env": "STAGING_PASSWORD",
+                    "timeout": 30.0,
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Test 1: Rename default database key (updates default_database reference)
+        args = Namespace(
+            existing_key="production",
+            key="prod",
+            url=None,
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+
+        # Verify default_database reference was updated
+        with open(self.config_path, 'r') as f:
+            updated_config = yaml.safe_load(f)
+        assert updated_config["default_database"] == "prod"
+        assert "prod" in updated_config["databases"]
+        assert "production" not in updated_config["databases"]
+
+        # Test 2: Rename non-default database key (default_database unchanged)
+        args = Namespace(
+            existing_key="staging",
+            key="test",
+            url=None,
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+
+        # Verify default_database reference unchanged
+        with open(self.config_path, 'r') as f:
+            updated_config = yaml.safe_load(f)
+        assert updated_config["default_database"] == "prod"  # Still points to prod
+        assert "test" in updated_config["databases"]
+        assert "staging" not in updated_config["databases"]
+
+    def test_update_validation_errors(self, capsys):
+        """Test input validation error conditions."""
+        # Create initial configuration
+        config_data = {
+            "default_database": "production",
+            "databases": {
+                "production": {
+                    "url": "http://localhost:8529",
+                    "database": "prod_db",
+                    "username": "admin",
+                    "password_env": "PROD_PASSWORD",
+                    "timeout": 30.0,
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Test 1: Nonexistent key → "Database 'missing' not found"
+        args = Namespace(
+            existing_key="missing",
+            key=None,
+            url="http://new:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 1  # EXIT_ERROR
+        captured = capsys.readouterr()
+        assert "Error: Database 'missing' not found" in captured.err
+
+        # Test 2: New key already exists → "Database 'existing' already exists"
+        args = Namespace(
+            existing_key="production",
+            key="production",  # Same key (no change)
+            url="http://new:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0  # This should work (same key is allowed)
+
+        # Add another database to test conflict
+        config_data["databases"]["staging"] = {
+            "url": "http://staging:8529",
+            "database": "staging_db",
+            "username": "admin",
+            "password_env": "STAGING_PASSWORD",
+            "timeout": 30.0,
+        }
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Try to rename to existing key
+        args = Namespace(
+            existing_key="production",
+            key="staging",  # Conflict with existing key
+            url=None,
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 1  # EXIT_ERROR
+        captured = capsys.readouterr()
+        assert "Error: Database 'staging' already exists" in captured.err
+
+        # Test 3: No changes specified → "No changes specified"
+        args = Namespace(
+            existing_key="production",
+            key=None,
+            url=None,
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 1  # EXIT_ERROR
+        captured = capsys.readouterr()
+        assert "Error: No changes specified" in captured.err
+
+    def test_update_system_errors(self, capsys):
+        """Test system-level error handling."""
+        # Create a valid config file first so the database exists
+        config_data = {
+            "databases": {
+                "test": {
+                    "url": "http://localhost:8529",
+                    "database": "test_db",
+                    "username": "admin",
+                    "password_env": "TEST_PASSWORD",
+                    "timeout": 30.0,
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Test 1: ConfigFileLoader exception → "Error updating database"
+        # Use a config file path that doesn't exist
+        args = Namespace(
+            existing_key="test",
+            key=None,
+            url="http://new:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=os.path.join(self.temp_dir, "nonexistent", "databases.yaml"),
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 1  # EXIT_ERROR
+        captured = capsys.readouterr()
+        # When the config file doesn't exist, it returns "Database not found"
+        assert "Database 'test' not found" in captured.err
+
+        # Test 2: Invalid config file path (directory doesn't exist)
+        # Create a config file in the temp_dir first, then try to update with a different path
+        args = Namespace(
+            existing_key="test",
+            key=None,
+            url="http://new:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=os.path.join(self.temp_dir, "another", "nonexistent", "databases.yaml"),
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 1  # EXIT_ERROR
+        captured = capsys.readouterr()
+        # Same behavior as Test 1
+        assert "Database 'test' not found" in captured.err
+
+    def test_update_user_cancellation(self, capsys):
+        """Test user declining confirmation prompt."""
+        # Create initial configuration
+        config_data = {
+            "databases": {
+                "production": {
+                    "url": "http://localhost:8529",
+                    "database": "prod_db",
+                    "username": "admin",
+                    "password_env": "PROD_PASSWORD",
+                    "timeout": 30.0,
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Mock user input to decline
+        with patch("builtins.input", return_value="n"):
+            args = Namespace(
+                existing_key="production",
+                key=None,
+                url="http://new:8529",
+                database=None,
+                username=None,
+                arango_password_env=None,
+                timeout=None,
+                description=None,
+                config_file=self.config_path,
+                dry_run=False,
+                yes=False,  # Don't skip confirmation
+            )
+            result = handle_update(args)
+            assert result == 2  # EXIT_CANCELLED
+            captured = capsys.readouterr()
+            assert "Operation cancelled" in captured.err
+
+        # Verify no file changes were made
+        with open(self.config_path, 'r') as f:
+            updated_config = yaml.safe_load(f)
+        assert updated_config["databases"]["production"]["url"] == "http://localhost:8529"  # Unchanged
+
+    def test_update_dry_run_mode(self, capsys):
+        """Test dry-run shows changes without applying them."""
+        # Create initial configuration
+        config_data = {
+            "default_database": "production",
+            "databases": {
+                "production": {
+                    "url": "http://localhost:8529",
+                    "database": "prod_db",
+                    "username": "admin",
+                    "password_env": "PROD_PASSWORD",
+                    "timeout": 30.0,
+                    "description": "Production database"
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Test multiple change types in dry-run
+        args = Namespace(
+            existing_key="production",
+            key="prod",
+            url="http://new-host:8529",
+            database="new_db",
+            username="newuser",
+            arango_password_env="NEW_PASSWORD",
+            timeout=60.0,
+            description="Updated description",
+            config_file=self.config_path,
+            dry_run=True,  # Dry-run mode
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "[UPDATED - DRY-RUN]" in captured.out
+        assert "Key: production → prod" in captured.out
+        assert "URL: http://localhost:8529 → http://new-host:8529" in captured.out
+        assert "Database: prod_db → new_db" in captured.out
+        assert "Username: admin → newuser" in captured.out
+        assert "Password Env: PROD_PASSWORD → NEW_PASSWORD" in captured.out
+        assert "Timeout: 30.0 → 60.0" in captured.out
+        assert "Description: Production database → Updated description" in captured.out
+
+        # Verify no file changes were made
+        with open(self.config_path, 'r') as f:
+            updated_config = yaml.safe_load(f)
+        assert updated_config["databases"]["production"]["url"] == "http://localhost:8529"  # Unchanged
+        assert updated_config["default_database"] == "production"  # Unchanged
+        assert "prod" not in updated_config["databases"]  # New key not added
+
+    def test_update_output_format(self, capsys):
+        """Test ConsequenceType.UPDATE usage and output formatting."""
+        # Create initial configuration
+        config_data = {
+            "databases": {
+                "production": {
+                    "url": "http://localhost:8529",
+                    "database": "prod_db",
+                    "username": "admin",
+                    "password_env": "PROD_PASSWORD",
+                    "timeout": 30.0,
+                }
+            }
+        }
+        os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
+        with open(self.config_path, 'w') as f:
+            yaml.dump(config_data, f)
+
+        # Test ConsequenceType.UPDATE usage (yellow color)
+        args = Namespace(
+            existing_key="production",
+            key=None,
+            url="http://new:8529",
+            database=None,
+            username=None,
+            arango_password_env=None,
+            timeout=None,
+            description=None,
+            config_file=self.config_path,
+            dry_run=False,
+            yes=True,
+        )
+        result = handle_update(args)
+        assert result == 0
+        captured = capsys.readouterr()
+
+        # Verify yellow color code for UPDATE type
+        # The ResultReporter uses ConsequenceType.UPDATE which has yellow color
+        assert "[UPDATED]" in captured.out
+        assert "Database configuration 'production'" in captured.out
+        assert "URL: http://localhost:8529 → http://new:8529" in captured.out
+        assert "Configuration saved to:" in captured.out

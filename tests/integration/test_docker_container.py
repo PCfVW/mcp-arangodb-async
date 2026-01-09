@@ -22,17 +22,25 @@ Environment Variable Gating:
 
 import os
 import subprocess
+import os
 import time
 from typing import Dict
 
-import docker
 import pytest
 
 # Test gating: Skip unless RUN_DOCKER_TESTS=1
 DOCKER_TESTS_FLAG = os.getenv("RUN_DOCKER_TESTS", "0") == "1"
 
+# Conditional docker import
+docker = None
+if DOCKER_TESTS_FLAG:
+    try:
+        import docker
+    except ImportError:
+        docker = None
+
 pytestmark = pytest.mark.skipif(
-    not DOCKER_TESTS_FLAG,
+    not DOCKER_TESTS_FLAG or docker is None,
     reason="Docker tests are skipped unless RUN_DOCKER_TESTS=1",
 )
 

@@ -322,5 +322,85 @@ Then, update the experiment beta in db2 with a new field to reference the protoc
 - Environment variable management for multiple instances
 - Network-level separation of data
 
-> **Previous:** [Scenario 2: Single Instance, Multiple Databases](02-single-instance-multiple-databases.md)  
+---
+
+## Configuration Updates
+
+Use the `db config update` command to modify existing database configurations across multiple instances. This is useful when:
+- Changing server URLs when migrating instances
+- Updating timeout settings for specific environments
+- Renaming configuration keys for better organization
+- Modifying descriptions to reflect instance purpose
+
+### Common Update Operations
+
+**Update URL for a production instance:**
+```bash
+maa db config update prod_db --url http://prod-arango:8529
+```
+
+**Update timeout for development instance:**
+```bash
+maa db config update dev_db --timeout 45
+```
+
+**Rename configuration key:**
+```bash
+maa db config update staging_db --key staging
+```
+
+**Update multiple fields:**
+```bash
+maa db config update prod_db \
+  --url http://new-prod:8529 \
+  --timeout 60 \
+  --description "Production instance - High availability"
+```
+
+**Preview changes with dry-run:**
+```bash
+maa db config update prod_db --url http://new-prod:8529 --dry-run
+```
+
+---
+
+## Advanced: Using Shorthand Aliases
+
+<details>
+<summary>💡 Complete scenario workflow with shorthand aliases</summary>
+
+**Scenario 3 - Multiple Instances, Multiple Databases:**
+
+```bash
+# Step 4: Add shared database on second instance
+maa db add shared \
+  --with-user user1 \
+  -u http://localhost:8530 \
+  -E .user1.env \
+  -P USER1_INSTANCE2_PASSWORD \
+  -R ARANGO_INSTANCE2_ROOT_PASSWORD
+
+# Step 5: Configure shared database
+maa db config add shared_db -u http://localhost:8530 -d shared -U user1 -P USER1_INSTANCE2_PASSWORD
+
+# Verification: Test all connections
+maa db config test first_db -E .user1.env
+maa db config test second_db -E .user1.env
+maa db config test shared_db -E .user1.env
+```
+
+**Alias reference:**
+- `-u` = `--url`
+- `-d` = `--database`
+- `-U` = `--username`
+- `-E` = `--environment-file` / `--env-file`
+- `-P` = `--arango-password-env` / `--pw-env`
+- `-R` = `--arango-root-password-env` / `--root-pw-env`
+
+See [CLI Reference](../cli-reference.md) for complete list.
+</details>
+
+---
+
+> **Previous:** [Scenario 2: Single Instance, Multiple Databases](02-single-instance-multiple-databases.md)
 > **Next:** [Back to Overview](README.md)

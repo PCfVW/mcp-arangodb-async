@@ -9,6 +9,7 @@ Functions:
 - handle_list() - List all configured databases
 - handle_test() - Test database connection
 - handle_status() - Show database resolution status
+- handle_update() - Update a database configuration
 """
 
 from __future__ import annotations
@@ -42,6 +43,7 @@ def handle_add(args: Namespace) -> int:
     reporter.add(ConsequenceType.ADD, f"  URL: {args.url}")
     reporter.add(ConsequenceType.ADD, f"  Database: {args.database}")
     reporter.add(ConsequenceType.ADD, f"  Username: {args.username}")
+    reporter.add(ConsequenceType.ADD, f"  Password Env: {args.arango_password_env}")
 
     # Dry-run mode: report and exit
     if dry_run:
@@ -51,7 +53,7 @@ def handle_add(args: Namespace) -> int:
     try:
         # Load existing configuration from YAML only (don't merge with env vars)
         # This ensures we only add what the user explicitly requests
-        loader = ConfigFileLoader(args.config_path)
+        loader = ConfigFileLoader(args.config_file)
         loader.load_yaml_only()
 
         # Check for duplicate key
@@ -71,7 +73,7 @@ def handle_add(args: Namespace) -> int:
             url=args.url,
             database=args.database,
             username=args.username,
-            password_env=args.password_env,
+            password_env=args.arango_password_env,
             timeout=args.timeout,
             description=args.description
         )
@@ -114,7 +116,7 @@ def handle_remove(args: Namespace) -> int:
     try:
         # Load existing configuration from YAML only (don't merge with env vars)
         # This ensures we only operate on explicitly configured databases
-        loader = ConfigFileLoader(args.config_path)
+        loader = ConfigFileLoader(args.config_file)
         loader.load_yaml_only()
 
         # Check if database exists
@@ -153,7 +155,7 @@ def handle_list(args: Namespace) -> int:
     """
     try:
         # Load configuration
-        loader = ConfigFileLoader(args.config_path)
+        loader = ConfigFileLoader(args.config_file)
         loader.load()
         
         databases = loader.get_configured_databases()
@@ -227,7 +229,7 @@ def handle_test(args: Namespace) -> int:
             load_credentials(args)
         
         # Load configuration
-        loader = ConfigFileLoader(args.config_path)
+        loader = ConfigFileLoader(args.config_file)
         loader.load()
 
         databases = loader.get_configured_databases()
@@ -269,7 +271,7 @@ def handle_status(args: Namespace) -> int:
     """
     try:
         # Load configuration
-        loader = ConfigFileLoader(args.config_path)
+        loader = ConfigFileLoader(args.config_file)
         loader.load()
 
         databases = loader.get_configured_databases()
@@ -310,3 +312,127 @@ def handle_status(args: Namespace) -> int:
         print(f"Error showing status: {e}", file=sys.stderr)
         return 1
 
+
+def handle_update(args: Namespace) -> int:
+    """Update a database configuration.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        Exit code (0 for success, 1 for error, 2 for cancelled)
+    """
+    from .cli_utils import ResultReporter, ConsequenceType, confirm_action, EXIT_SUCCESS, EXIT_ERROR, EXIT_CANCELLED
+
+    # Initialize reporter
+    dry_run = getattr(args, 'dry_run', False)
+    reporter = ResultReporter("db config update", dry_run=dry_run)
+
+    try:
+        # Load existing configuration from YAML only
+        loader = ConfigFileLoader(args.config_file)
+        loader.load_yaml_only()
+        
+        existing_databases = loader.get_configured_databases()
+        
+        # Validate existing key exists
+        if args.existing_key not in existing_databases:
+            print(f"Error: Database '{args.existing_key}' not found", file=sys.stderr)
+            return EXIT_ERROR
+        
+        existing_config = existing_databases[args.existing_key]
+        
+        # Determine final key (use new key if provided, otherwise keep existing)
+        final_key = args.key if args.key else args.existing_key
+        
+        # Validate new key doesn't conflict (if changing key)
+        if args.key and args.key in existing_databases and args.key != args.existing_key:
+            print(f"Error: Database '{args.key}' already exists", file=sys.stderr)
+            return EXIT_ERROR
+        
+        # Build updated configuration by merging existing with new values
+        # Description: None = no change, "" = clear it, "text" = set new value
+        if args.description is None:
+            new_description = existing_config.description  # Keep existing
+        elif args.description == "":
+            new_description = None  # Clear it
+        else:
+            new_description = args.description  # Set new value
+        
+        updated_config = DatabaseConfig(
+            url=args.url if args.url else existing_config.url,
+            database=args.database if args.database else existing_config.database,
+            username=args.username if args.username else existing_config.username,
+            password_env=args.arango_password_env if args.arango_password_env else existing_config.password_env,
+            timeout=args.timeout if args.timeout is not None else existing_config.timeout,
+            description=new_description,
+        )
+        
+        # Check if any changes are specified
+        has_changes = (
+            args.key or
+            args.url or
+            args.database or
+            args.username or
+            args.arango_password_env or
+            args.timeout is not None or
+            args.description is not None  # includes "" (clear)
+        )
+        
+        if not has_changes:
+            print("Error: No changes specified", file=sys.stderr)
+            return EXIT_ERROR
+        
+        # Build consequence list
+        if args.key and args.key != args.existing_key:
+            reporter.add(ConsequenceType.UPDATE, f"Database configuration '{args.existing_key}'")
+            reporter.add(ConsequenceType.UPDATE, f"  Key: {args.existing_key} → {args.key}")
+        else:
+            reporter.add(ConsequenceType.UPDATE, f"Database configuration '{args.existing_key}'")
+        
+        # Add field changes
+        if args.url:
+            reporter.add(ConsequenceType.UPDATE, f"  URL: {existing_config.url} → {args.url}")
+        if args.database:
+            reporter.add(ConsequenceType.UPDATE, f"  Database: {existing_config.database} → {args.database}")
+        if args.username:
+            reporter.add(ConsequenceType.UPDATE, f"  Username: {existing_config.username} → {args.username}")
+        if args.arango_password_env:
+            reporter.add(ConsequenceType.UPDATE, f"  Password Env: {existing_config.password_env} → {args.arango_password_env}")
+        if args.timeout is not None:
+            reporter.add(ConsequenceType.UPDATE, f"  Timeout: {existing_config.timeout} → {args.timeout}")
+        if args.description is not None:
+            old_desc = existing_config.description or "(not set)"
+            new_desc = args.description or "(not set)"
+            reporter.add(ConsequenceType.UPDATE, f"  Description: {old_desc} → {new_desc}")
+        
+        # Dry-run mode: report and exit
+        if dry_run:
+            reporter.report_result()
+            return EXIT_SUCCESS
+        
+        # Confirmation prompt
+        if not confirm_action(reporter.report_prompt() + "\n\nAre you sure you want to proceed?", args):
+            print("Operation cancelled", file=sys.stderr)
+            return EXIT_CANCELLED
+        
+        # Update default_database reference if key is being renamed and it's the default
+        if args.key and loader.default_database == args.existing_key:
+            loader.default_database = args.key
+        
+        # Use remove+add pattern to update
+        loader.remove_database(args.existing_key)
+        loader.add_database(final_key, updated_config)
+        
+        # Save changes
+        loader.save_to_yaml()
+        
+        # Report success
+        reporter.report_result()
+        print(f"\nConfiguration saved to: {loader.config_path}")
+        
+        return EXIT_SUCCESS
+        
+    except Exception as e:
+        print(f"Error updating database: {e}", file=sys.stderr)
+        return EXIT_ERROR

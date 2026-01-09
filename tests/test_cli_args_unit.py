@@ -237,6 +237,22 @@ class TestCLIArgumentParsing:
                 assert call_kwargs.get("config_file") == "/path/to/http-config.yaml"
                 assert result == 0
 
+    def test_server_config_path_backward_compat(self):
+        """Verify --config-path backward compatibility in server command."""
+        with patch(
+            "sys.argv",
+            ["mcp_arangodb_async", "server", "--config-path", "/path/to/config.yaml"],
+        ):
+            with patch("mcp_arangodb_async.entry.main") as mock_entry:
+                from mcp_arangodb_async.__main__ import main
+
+                mock_entry.return_value = None
+                result = main()
+
+                # Should call with config_file kwarg (unified dest parameter)
+                mock_entry.assert_called_once_with(config_file="/path/to/config.yaml")
+                assert result == 0
+
 
 class TestCLIEnvironmentVariables:
     """Test environment variable support for transport configuration."""
