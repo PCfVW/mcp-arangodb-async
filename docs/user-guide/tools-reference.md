@@ -1466,7 +1466,7 @@ Switch to a different workflow context with a predefined set of tools. Enables w
 - `graph_modeling` (10 tools) - Graph creation, traversal, and analysis
 - `bulk_operations` (6 tools) - Batch processing and bulk data operations
 - `schema_validation` (6 tools) - Data integrity and schema management
-- `full` (43 tools) - All available tools (fallback for complex workflows)
+- `full` (46 tools) - All available tools (fallback for complex workflows)
 
 **Example:**
 ```json
@@ -1611,7 +1611,7 @@ List all available workflow contexts with their descriptions and optional tool l
     },
     "full": {
       "description": "All available tools",
-      "tool_count": 43
+      "tool_count": 46
     }
   },
   "total_contexts": 6,
@@ -1720,9 +1720,9 @@ Get usage statistics for all tools, including use counts and last used timestamp
 **Result:**
 ```json
 {
-  "total_tools": 43,
+  "total_tools": 46,
   "tools_used": 12,
-  "tools_unused": 31,
+  "tools_unused": 34,
   "usage_stats": [
     {
       "name": "arango_query",

@@ -113,7 +113,7 @@ Understand the internals and contribute to the project.
    - Why low-level Server API instead of FastMCP
    - Complex startup logic with retry/reconnect
    - Runtime state modification
-   - Centralized routing for 34+ tools
+   - Centralized routing for 46+ tools
    - Test suite compatibility
    - When to use each approach
 

@@ -1,4 +1,32 @@
-name: Build and Publish to PyPI
+# =============================================================================
+# WORKFLOW: Build and Publish to PyPI and MCP Registry
+# =============================================================================
+#
+# TRIGGER: Push to master branch when pyproject.toml changes
+#          (relevant fields: publish_on_pypi and version - see steps 1. & 2.)
+#
+# WHAT IT DOES:
+#   1. Checks if publish_on_pypi is set to true in pyproject.toml
+#   2. Compares version in pyproject.toml against latest PyPI version
+#   3. Builds and publishes to PyPI (if version is greater)
+#   4. Waits for PyPI propagation (90s + retry loop with verification)
+#   5. Updates server.json with the new version (transiently, not committed)
+#   6. Publishes to MCP Registry (with retry logic)
+#   7. Logs workflow result (always runs)
+#
+# REQUIREMENTS:
+#   - GitHub environment "pypi-release-of-the-master-branch" configured
+#   - PyPI trusted publisher configured for this repo
+#   - MCP Registry namespace ownership (io.github.PCfVW/)
+#
+# KEY FILES:
+#   - pyproject.toml: source of version and publish_on_pypi flag
+#   - server.json: MCP registry manifest (version updated transiently for publish, kept at 0.0.0 in repo)
+#   - README.md: must contain "mcp-name: io.github.PCfVW/mcp-arangodb-async"
+#
+# =============================================================================
+
+name: Build and Publish to PyPI and MCP Registry
 
 on:
   push:
@@ -26,6 +54,7 @@ jobs:
       - name: Install dependencies
         run: python -m pip install --upgrade pip build packaging requests toml
 
+      # Step 1. Checks if publish_on_pypi is set to true in pyproject.toml
       - name: Check publish flag
         id: publish_flag
         run: |
@@ -70,6 +99,7 @@ jobs:
           echo "flag=$publish_flag" >> $GITHUB_OUTPUT
           echo "Publish flag is set to: $publish_flag"
 
+      # Step 2. Compares version in pyproject.toml against latest PyPI version
       - name: Get current version from pyproject.toml
         id: current_version
         if: steps.publish_flag.outputs.flag == 'true'
@@ -113,8 +143,8 @@ jobs:
         if: steps.publish_flag.outputs.flag == 'true'
         run: |
           pypi_version=$(python -c "
-          import requests
           import json
+          import requests
           import sys
           from packaging import version
 
@@ -175,7 +205,6 @@ jobs:
           echo "Current version: ${{ steps.current_version.outputs.version }}"
           echo "Latest PyPI version: ${{ steps.pypi_version.outputs.version }}"
 
-          # Use Python to compare versions properly with comprehensive error handling
           python -c "
           from packaging import version
           import sys
@@ -210,6 +239,7 @@ jobs:
               sys.exit(1)
           "
 
+      # Step 3. Builds and publishes to PyPI (if version is greater)
       - name: Build package
         if: steps.publish_flag.outputs.flag == 'true'
         run: python -m build
@@ -218,17 +248,93 @@ jobs:
         if: steps.publish_flag.outputs.flag == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
 
+      # Step 4. Waits for PyPI propagation (90s + retry loop with verification)
+      - name: Wait for PyPI to propagate and verify availability
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          VERSION="${{ steps.current_version.outputs.version }}"
+          echo "Waiting 90 seconds for initial PyPI propagation..."
+          sleep 90
+
+          echo "Verifying package version $VERSION is available on PyPI..."
+          for i in {1..10}; do
+            if curl -s "https://pypi.org/pypi/mcp-arangodb-async/$VERSION/json" | grep -q "\"version\": \"$VERSION\""; then
+              echo "✓ Package version $VERSION is available on PyPI"
+              exit 0
+            fi
+            echo "Attempt $i/10: Package not yet available, waiting 15s..."
+            sleep 15
+          done
+          echo "::error::Package version $VERSION not available on PyPI after ~4 minutes"
+          exit 1
+
+      # Step 5. Updates server.json with the new version (transiently, not committed)
+      - name: Update server.json version
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          VERSION="${{ steps.current_version.outputs.version }}"
+          echo "Updating server.json to version $VERSION"
+          python -c "
+          import json
+          with open('server.json', 'r') as f:
+              data = json.load(f)
+          data['version'] = '$VERSION'
+          data['packages'][0]['version'] = '$VERSION'
+          with open('server.json', 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          "
+          echo "Updated server.json:"
+          cat server.json
+
+      # Step 6. Publishes to MCP Registry (with retry logic)
+      - name: Install MCP Publisher CLI
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.0.0/mcp-publisher_1.0.0_linux_amd64.tar.gz" | tar xz mcp-publisher
+          chmod +x mcp-publisher
+
+      - name: Login to MCP Registry
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          for i in {1..3}; do
+            echo "Attempt $i/3: Logging in to MCP Registry..."
+            if ./mcp-publisher login github-oidc; then
+              echo "✓ Successfully logged in to MCP Registry"
+              exit 0
+            fi
+            echo "Login attempt $i failed, waiting 10s before retry..."
+            sleep 10
+          done
+          echo "::error::Failed to login to MCP Registry after 3 attempts"
+          exit 1
+
+      - name: Publish to MCP Registry
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          for i in {1..3}; do
+            echo "Attempt $i/3: Publishing to MCP Registry..."
+            if ./mcp-publisher publish; then
+              echo "✓ Successfully published to MCP Registry"
+              exit 0
+            fi
+            echo "Publish attempt $i failed, waiting 10s before retry..."
+            sleep 10
+          done
+          echo "::error::Failed to publish to MCP Registry after 3 attempts"
+          exit 1
+
+      # Step 7. Logs workflow result (always runs)
       - name: Log workflow result
+        if: always()
         run: |
           if [ "${{ steps.publish_flag.outputs.flag }}" != "true" ]; then
             echo "::notice::Workflow skipped: publish_on_pypi is not set to true in pyproject.toml"
+          elif [ "${{ job.status }}" == "success" ]; then
+            echo "::notice::Package successfully published to PyPI and MCP Registry"
+            echo "::notice::Published version: ${{ steps.current_version.outputs.version }}"
           else
-            if [ "${{ steps.version_check.outcome }}" == "success" ]; then
-              echo "::notice::Package successfully published to PyPI"
-              echo "::notice::Published version: ${{ steps.current_version.outputs.version }}"
-            else
-              echo "::warning::Package not published. Version check failed."
-              echo "::warning::Current version: ${{ steps.current_version.outputs.version }}"
-              echo "::warning::PyPI version: ${{ steps.pypi_version.outputs.version }}"
-            fi
+            echo "::error::Workflow failed. Check the logs above for details."
+            echo "::warning::Current version: ${{ steps.current_version.outputs.version }}"
+            echo "::warning::PyPI version: ${{ steps.pypi_version.outputs.version }}"
           fi

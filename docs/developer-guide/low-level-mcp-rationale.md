@@ -189,10 +189,10 @@ FastMCP doesn't expose the request context or lifespan context for runtime modif
 
 ---
 
-### 3. Centralized Routing for 34+ Tools ⭐
+### 3. Centralized Routing for 46+ Tools ⭐
 
-**The Challenge:**  
-We have 34 tools. Managing them with if-elif chains is error-prone and slow.
+**The Challenge:**
+We have 46 tools. Managing them with if-elif chains is error-prone and slow.
 
 **Our Solution:**
 ```python
@@ -346,7 +346,7 @@ By using the low-level Server API, we achieve:
 2. **Advanced Features** - Retry logic, lazy reconnection, runtime state modification
 3. **Test Compatibility** - Preserve 230+ existing tests
 4. **Centralized Logic** - Single point for cross-cutting concerns
-5. **Scalability** - O(1) tool dispatch for 34+ tools
+5. **Scalability** - O(1) tool dispatch for 46+ tools
 
 ---
 
@@ -356,7 +356,7 @@ The low-level MCP Server API is the right choice for mcp-arangodb-async because:
 
 - ✅ We need complex startup logic with retry/reconnect
 - ✅ We need runtime state modification for lazy connection recovery
-- ✅ We have 34+ tools requiring centralized routing
+- ✅ We have 46+ tools requiring centralized routing
 - ✅ We have 230+ tests that depend on low-level API
 - ✅ We need custom error handling across all tools
 

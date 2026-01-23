@@ -15,39 +15,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Table of Contents
 
-1. [Version 0.5.3 (Current)](#version-053---2026-01-04)
-2. [Version 0.5.2](#version-052---2026-01-03)
-3. [Version 0.5.1](#version-051---2025-12-31)
-4. [Version 0.5.0](#version-050---2025-12-15)
-5. [Version 0.4.9](#version-049---2025-12-09)
-6. [Version 0.4.8](#version-048---2025-12-04)
-7. [Version 0.4.7](#version-047---2025-11-28)
-8. [Version 0.4.6](#version-046---2025-11-27)
-9. [Version 0.4.5](#version-045---2025-11-27)
-10. [Version 0.4.4](#version-044---2025-11-27)
-11. [Version 0.4.3](#version-043---2025-11-24)
-12. [Version 0.4.2](#version-042---2025-11-24)
-13. [Version 0.4.1](#version-041---2025-11-24)
-14. [Version 0.4.0](#version-040---2025-11-11)
-15. [Version 0.3.2](#version-032---2025-10-20)
-16. [Version 0.3.1](#version-031---2025-10-20)
-17. [Version 0.3.0](#version-030---2025-10-20)
-18. [Version 0.2.11](#version-0211---2025-10-20)
-19. [Version 0.2.10](#version-0210---2025-10-20)
-20. [Version 0.2.9](#version-029---2025-10-20)
-21. [Version 0.2.8](#version-028---2025-10-20)
-22. [Version 0.2.7](#version-027---2025-10-19)
-23. [Version 0.2.6](#version-026---2025-10-15)
-24. [Version 0.2.5](#version-025---2025-10-10)
-25. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
-26. [Version 0.1.x](#version-01x---2025-08-01)
-27. [Migration Guides](#migration-guides)
+1. [Version 0.5.4 (Current)](#version-054---2026-01-23)
+2. [Version 0.5.3](#version-053---2026-01-04)
+3. [Version 0.5.2](#version-052---2026-01-03)
+4. [Version 0.5.1](#version-051---2025-12-31)
+5. [Version 0.5.0](#version-050---2025-12-15)
+6. [Version 0.4.9](#version-049---2025-12-09)
+7. [Version 0.4.8](#version-048---2025-12-04)
+8. [Version 0.4.7](#version-047---2025-11-28)
+9. [Version 0.4.6](#version-046---2025-11-27)
+10. [Version 0.4.5](#version-045---2025-11-27)
+11. [Version 0.4.4](#version-044---2025-11-27)
+12. [Version 0.4.3](#version-043---2025-11-24)
+13. [Version 0.4.2](#version-042---2025-11-24)
+14. [Version 0.4.1](#version-041---2025-11-24)
+15. [Version 0.4.0](#version-040---2025-11-11)
+16. [Version 0.3.2](#version-032---2025-10-20)
+17. [Version 0.3.1](#version-031---2025-10-20)
+18. [Version 0.3.0](#version-030---2025-10-20)
+19. [Version 0.2.11](#version-0211---2025-10-20)
+20. [Version 0.2.10](#version-0210---2025-10-20)
+21. [Version 0.2.9](#version-029---2025-10-20)
+22. [Version 0.2.8](#version-028---2025-10-20)
+23. [Version 0.2.7](#version-027---2025-10-19)
+24. [Version 0.2.6](#version-026---2025-10-15)
+25. [Version 0.2.5](#version-025---2025-10-10)
+26. [Version 0.2.0-0.2.4](#version-020-024---2025-09-01-to-2025-10-01)
+27. [Version 0.1.x](#version-01x---2025-08-01)
+28. [Migration Guides](#migration-guides)
+
+---
+
+## [0.5.4] - 2026-01-23
+
+**Current Release**
+
+### Changed
+
+✅ **GitHub Actions Workflow Improvements**
+- **PyPI Publication Reliability:**
+  - Increased initial PyPI propagation wait from 30s to 90s
+  - Added retry loop with verification (up to 10 attempts × 15s = ~4 min total)
+  - Fixed critical bug: PyPI verification grep pattern now correctly matches JSON format (`"version": "X.Y.Z"` with space)
+  - Package availability is now verified before proceeding to MCP Registry publish
+
+- **MCP Registry Publication Reliability:**
+  - Added retry logic for `mcp-publisher login` (3 attempts with 10s delay)
+  - Added retry logic for `mcp-publisher publish` (3 attempts with 10s delay)
+  - Server.json version updated transiently (not committed back, kept at 0.0.0 in repo)
+
+- **Workflow Documentation:**
+  - Added comprehensive header comment explaining trigger, steps, requirements, and key files
+  - Added inline step comments (Step 1-7) matching header documentation
+  - Improved final logging step with `if: always()` and accurate status reporting
+
+### Fixed
+
+✅ **Critical Bug Fixes**
+- **PyPI Verification Pattern:** Fixed grep pattern that was missing a space after the colon, causing verification to always fail and wait the full timeout
+- **Missing Import:** Added missing `import json` in PyPI version check script to prevent `NameError` when catching `json.JSONDecodeError`
+
+✅ **Documentation Fixes**
+- **README.md:** Fixed typo "excert" → "excerpt" and missing quote in code example (`'modules' and  functions'` → `'modules' and 'functions'`)
+- **Tool Count Updates:** Updated outdated tool counts across 7 documentation files (34/43 → 46 tools):
+  - `docs/index.md` - 34+ → 46+
+  - `docs/user-guide/troubleshooting.md` - 34 → 46
+  - `docs/user-guide/mcp-design-patterns.md` - 43 → 46 (11 occurrences)
+  - `docs/user-guide/tools-reference.md` - 43 → 46 (3 occurrences)
+  - `docs/getting-started/first-interaction.md` - 34 → 46
+  - `docs/developer-guide/architecture.md` - 34 → 46
+  - `docs/developer-guide/low-level-mcp-rationale.md` - 34+ → 46+
+  - `docs/configuration/transport-configuration.md` - 34 → 46
+
+### Technical Details
+
+- **Files Modified:**
+  - `.github/workflows/publish-new-mcp-arangodb-async-to-pypi.yaml` - Complete workflow overhaul
+  - `README.md` - Typo fixes
+  - `docs/index.md` - Tool count update
+  - `docs/user-guide/troubleshooting.md` - Tool count update
+  - `docs/user-guide/mcp-design-patterns.md` - Tool count updates (11 occurrences)
+  - `docs/user-guide/tools-reference.md` - Tool count updates
+  - `docs/getting-started/first-interaction.md` - Tool count update
+  - `docs/developer-guide/architecture.md` - Tool count update
+  - `docs/developer-guide/low-level-mcp-rationale.md` - Tool count updates
+  - `docs/configuration/transport-configuration.md` - Tool count updates
+
+- **Workflow Steps (7 total):**
+  1. Checks if `publish_on_pypi` is set to true in pyproject.toml
+  2. Compares version in pyproject.toml against latest PyPI version
+  3. Builds and publishes to PyPI (if version is greater)
+  4. Waits for PyPI propagation (90s + retry loop with verification)
+  5. Updates server.json with the new version (transiently, not committed)
+  6. Publishes to MCP Registry (with retry logic)
+  7. Logs workflow result (always runs)
 
 ---
 
 ## [0.5.3] - 2026-01-04
-
-**Current Release**
 
 ### Added
 

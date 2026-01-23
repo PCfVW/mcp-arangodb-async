@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "$comment": "Version is 0.0.0 intentionally. The GitHub workflow updates it transiently during publish to MCP Registry, but does not commit it back. This avoids sync issues (no git pull needed after workflow). The authoritative version is in pyproject.toml.",
+  "name": "io.github.PCfVW/mcp-arangodb-async",
+  "description": "Async MCP server for ArangoDB: 46 tools for graphs, queries, and multi-tenancy.",
+  "repository": {
+    "url": "https://github.com/PCfVW/mcp-arangodb-async",
+    "source": "github"
+  },
+  "version": "0.0.0",
+  "packages": [
+    {
+      "registry_type": "pypi",
+      "identifier": "mcp-arangodb-async",
+      "version": "0.0.0"
+    }
+  ]
+}

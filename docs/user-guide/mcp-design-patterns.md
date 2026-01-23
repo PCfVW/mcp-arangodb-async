@@ -23,7 +23,7 @@ Comprehensive guide to using MCP Design Patterns for efficient tool management w
 
 ## Overview
 
-The mcp-arangodb-async server provides **43 MCP tools** across 9 categories. As AI agents scale to handle hundreds or thousands of tools across multiple MCP servers, loading all tool definitions upfront and passing intermediate results through the context window reduces efficiency and increases costs.
+The mcp-arangodb-async server provides **46 MCP tools** across 9 categories. As AI agents scale to handle hundreds or thousands of tools across multiple MCP servers, loading all tool definitions upfront and passing intermediate results through the context window reduces efficiency and increases costs.
 
 This guide explores three MCP design patterns that enable AI agents to interact with the server more efficiently:
 
@@ -33,7 +33,7 @@ This guide explores three MCP design patterns that enable AI agents to interact 
 
 These patterns are inspired by [Anthropic's research on code execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp), which demonstrates how AI agents can reduce context overhead by up to **98.7%** through strategic tool management.
 
-**Key Insight:** Rather than loading all 43 tools upfront (consuming ~150,000 tokens), AI agents can dynamically discover and load only the 3-5 tools needed for a specific task (~2,000 tokens).
+**Key Insight:** Rather than loading all 46 tools upfront (consuming ~150,000 tokens), AI agents can dynamically discover and load only the 3-5 tools needed for a specific task (~2,000 tokens).
 
 ---
 
@@ -44,7 +44,7 @@ These patterns are inspired by [Anthropic's research on code execution with MCP]
 When an MCP server exposes dozens of tools, loading all tool definitions into the AI agent's context window consumes excessive tokens before the agent even reads the user's request.
 
 **Without Design Patterns:**
-- Load all 43 tool definitions upfront: ~150,000 tokens
+- Load all 46 tool definitions upfront: ~150,000 tokens
 - Every intermediate result passes through the model
 - Large documents may exceed context window limits
 - Increased latency and costs
@@ -61,7 +61,7 @@ When an MCP server exposes dozens of tools, loading all tool definitions into th
 
 **Traditional Approach:**
 ```
-1. Load all 43 tools → 150,000 tokens
+1. Load all 46 tools → 150,000 tokens
 2. Query modules collection → 10,000 rows through context
 3. Filter in model → Process all rows
 4. Generate graph → Full dataset through context
@@ -221,7 +221,7 @@ Uses: arango_create_graph, arango_add_edge, arango_traverse
 Result: Circular dependency detected in modules/auth → modules/database → modules/models → modules/auth
 ```
 
-**Token Savings:** 148,000 tokens (98.7% reduction from loading all 43 tools)
+**Token Savings:** 148,000 tokens (98.7% reduction from loading all 46 tools)
 
 ### Best Practices
 
@@ -270,7 +270,7 @@ The server provides 6 predefined workflow contexts:
 | **graph_modeling** | 10 | Graph creation, traversal, and analysis |
 | **bulk_operations** | 6 | Batch processing and bulk data operations |
 | **schema_validation** | 6 | Data integrity and schema management |
-| **full** | 43 | All available tools (fallback for complex workflows) |
+| **full** | 46 | All available tools (fallback for complex workflows) |
 
 ### Available Tools
 
@@ -456,7 +456,7 @@ Uses: arango_create_graph, arango_add_edge, arango_graph_statistics
 Result: Graph created with 10,000 vertices, 45,000 edges. Average degree: 4.5
 ```
 
-**Token Savings:** By maintaining focused tool sets (7-10 tools per stage), the agent avoids loading all 43 tools throughout the workflow.
+**Token Savings:** By maintaining focused tool sets (7-10 tools per stage), the agent avoids loading all 46 tools throughout the workflow.
 
 ### Best Practices
 
@@ -581,9 +581,9 @@ Get usage statistics for all tools, including use counts and last used timestamp
 **Result:**
 ```json
 {
-  "total_tools": 43,
+  "total_tools": 46,
   "tools_used": 12,
-  "tools_unused": 31,
+  "tools_unused": 34,
   "usage_stats": [
     {
       "name": "arango_query",
@@ -723,7 +723,7 @@ Uses: arango_backup, arango_validate_graph_integrity
 Result: Backup created (250MB), graph integrity validated (0 orphaned edges)
 ```
 
-**Token Savings:** By unloading tools after each stage, the agent maintains 5-12 tools per stage instead of all 43 tools throughout the workflow.
+**Token Savings:** By unloading tools after each stage, the agent maintains 5-12 tools per stage instead of all 46 tools throughout the workflow.
 
 ### Best Practices
 
@@ -838,7 +838,7 @@ Result: Validation passed, backup created
 # Phase 7: Usage Analysis (Tool Unloading)
 Agent: "Check tool usage statistics."
 Call: arango_get_tool_usage_stats()
-Result: Used 15/43 tools, 28 tools never loaded (65% reduction)
+Result: Used 15/46 tools, 31 tools never loaded (67% reduction)
 ```
 
 **Estimated Total Token Savings:** ~130,000 tokens (87% reduction) by combining all three patterns
@@ -908,7 +908,7 @@ Result: Used 15/43 tools, 28 tools never loaded (65% reduction)
 
 ## Related Documentation
 
-- [Tools Reference](./tools-reference.md) - Complete documentation for all 43 MCP tools
+- [Tools Reference](./tools-reference.md) - Complete documentation for all 46 MCP tools
 - [Quickstart Guide](../getting-started/quickstart.md) - Get started with mcp-arangodb-async
 - [Environment Variables](../configuration/environment-variables.md) - Configure the MCP server
 - [Codebase Analysis Example](../examples/codebase-analysis.md) - Comprehensive graph modeling documentation

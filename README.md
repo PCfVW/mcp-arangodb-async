@@ -1,3 +1,5 @@
+<!-- mcp-name: io.github.PCfVW/mcp-arangodb-async -->
+
 # ArangoDB MCP Server for Python
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue)](https://www.python.org/)
@@ -33,17 +35,17 @@ A production-ready Model Context Protocol (MCP) server exposing advanced ArangoD
 
 ## Features
 
-✅ **46 MCP Tools** - Complete ArangoDB operations (queries, collections, indexes, graphs)
-✅ **Multi-Tenancy** - Work with multiple databases, environment switching, cross-database operations
-✅ **MCP Design Patterns** - Progressive discovery, context switching, tool unloading (98.7% token savings)
-✅ **Graph Management** - Create, traverse, backup/restore named graphs
-✅ **Content Conversion** - JSON, Markdown, YAML, and Table formats
-✅ **Backup/Restore** - Collection and graph-level backup with validation
-✅ **Analytics** - Query profiling, explain plans, graph statistics
-✅ **Dual Transport** - stdio (desktop clients) and HTTP (web/containerized)
-✅ **Docker Support** - Run in Docker for isolation and reproducibility
-✅ **Production-Ready** - Retry logic, graceful degradation, comprehensive error handling
-✅ **Type-Safe** - Pydantic validation for all tool arguments
+- ✅ **46 MCP Tools** - Complete ArangoDB operations (queries, collections, indexes, graphs)
+- ✅ **Multi-Tenancy** - Work with multiple databases, environment switching, cross-database operations
+- ✅ **MCP Design Patterns** - Progressive discovery, context switching, tool unloading (98.7% token savings)
+- ✅ **Graph Management** - Create, traverse, backup/restore named graphs
+- ✅ **Content Conversion** - JSON, Markdown, YAML, and Table formats
+- ✅ **Backup/Restore** - Collection and graph-level backup with validation
+- ✅ **Analytics** - Query profiling, explain plans, graph statistics
+- ✅ **Dual Transport** - stdio (desktop clients) and HTTP (web/containerized)
+- ✅ **Docker Support** - Run in Docker for isolation and reproducibility
+- ✅ **Production-Ready** - Retry logic, graceful degradation, comprehensive error handling
+- ✅ **Type-Safe** - Pydantic validation for all tool arguments
 
 ---
 
@@ -367,11 +369,11 @@ The server exposes **46 MCP tools** organized into 11 categories:
 
 ## Use Case Example: Codebase Graph Analysis
 
-Model your codebase as a graph to analyze dependencies, find circular references, and understand architecture. Here is an excert from the longer [codebase analysis example](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/examples/codebase-analysis.md):
+Model your codebase as a graph to analyze dependencies, find circular references, and understand architecture. Here is an excerpt from the longer [codebase analysis example](https://github.com/PCfVW/mcp-arango-async/blob/master/docs/examples/codebase-analysis.md):
 
 ```python
 # 1. Create graph structure
-Ask Claude: "Create a graph called 'codebase' with vertex collections 'modules' and  functions', and edge collection 'calls' connecting functions"
+Ask Claude: "Create a graph called 'codebase' with vertex collections 'modules' and 'functions', and edge collection 'calls' connecting functions"
 
 # 2. Import codebase data
 Ask Claude: "Insert these modules into the 'modules' collection: [...]"

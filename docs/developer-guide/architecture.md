@@ -74,7 +74,7 @@ The mcp-arangodb-async server is a production-ready MCP server that exposes Aran
 │                      Tool Layer                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  Tool Registry (TOOL_REGISTRY)                            │   │
-│  │  • 34 registered tools                                    │   │
+│  │  • 46 registered tools                                    │   │
 │  │  • Metadata: name, description, Pydantic model            │   │
 │  │  • Handler function reference                             │   │
 │  └──────────────────────────────────────────────────────────┘   │
@@ -312,7 +312,7 @@ async def run_stdio():
             write_stream,
             InitializationOptions(
                 server_name="mcp-arangodb-async",
-                server_version="0.2.7",
+                server_version="0.5.4",
                 capabilities=server.get_capabilities(...)
             )
         )

@@ -252,7 +252,7 @@ python -m mcp_arangodb_async
 ```
 INFO:mcp_arangodb_async:Starting MCP server (stdio transport)
 INFO:mcp_arangodb_async:Connected to ArangoDB: mcp_arangodb_test
-INFO:mcp_arangodb_async:Registered 34 tools
+INFO:mcp_arangodb_async:Registered 46 tools
 ```
 
 ---
@@ -432,7 +432,7 @@ docker compose --profile http --env-file .env up -d
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `MCP_COMPAT_TOOLSET` | string | `full` | Toolset: `baseline` (7 tools) or `full` (34 tools) |
+| `MCP_COMPAT_TOOLSET` | string | `full` | Toolset: `baseline` (7 tools) or `full` (46 tools) |
 | `LOG_LEVEL` | string | `INFO` | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 
 ---

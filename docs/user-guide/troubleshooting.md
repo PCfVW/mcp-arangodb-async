@@ -382,7 +382,7 @@ Available tools: []
 **2. Test tool listing:**
 ```powershell
 python scripts/mcp_stdio_client.py
-# Should list all 34 tools
+# Should list all 46 tools
 ```
 
 **3. Verify toolset configuration:**
