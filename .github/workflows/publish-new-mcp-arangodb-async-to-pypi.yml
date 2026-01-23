@@ -8,11 +8,14 @@
 # WHAT IT DOES:
 #   1. Checks if publish_on_pypi is set to true in pyproject.toml
 #   2. Compares version in pyproject.toml against latest PyPI version
-#   3. Builds and publishes to PyPI (if version is greater)
-#   4. Waits for PyPI propagation (90s + retry loop with verification)
+#   3. Builds and publishes to PyPI (if version is greater; skipped if already on PyPI)
+#   4. Waits for PyPI propagation (10min + retry loop; skipped if already on PyPI)
 #   5. Updates server.json with the new version (transiently, not committed)
 #   6. Publishes to MCP Registry (with retry logic)
 #   7. Logs workflow result (always runs)
+#
+# NOTE: If version already exists on PyPI (e.g., partial failure recovery), steps 3-4
+#       are skipped and the workflow proceeds directly to MCP Registry publication.
 #
 # REQUIREMENTS:
 #   - GitHub environment "pypi-release-of-the-master-branch" configured
@@ -199,21 +202,21 @@ jobs:
           ")
           echo "version=$pypi_version" >> $GITHUB_OUTPUT
 
-      - name: Check if version is greater than PyPI version
+      - name: Check if version needs PyPI publication
         id: version_check
         if: steps.publish_flag.outputs.flag == 'true'
         run: |
           echo "Current version: ${{ steps.current_version.outputs.version }}"
           echo "Latest PyPI version: ${{ steps.pypi_version.outputs.version }}"
 
-          python -c "
+          result=$(python -c "
           from packaging import version
           import sys
 
           current = '${{ steps.current_version.outputs.version }}'
           pypi_published = '${{ steps.pypi_version.outputs.version }}'
 
-          print(f'Comparing versions: {current} vs {pypi_published}')
+          print(f'Comparing versions: {current} vs {pypi_published}', file=sys.stderr)
 
           # Validate version strings
           try:
@@ -223,39 +226,43 @@ jobs:
               print(f'Error: Failed to parse version strings - {e}', file=sys.stderr)
               sys.exit(1)
 
-          # Check if versions are the same
+          # Check if versions are the same (already on PyPI, skip to MCP Registry)
           if current == pypi_published:
-              print(f'Error: Current version ({current}) is the same as the latest PyPI version ({pypi_published}). Please increment the version number.')
-              sys.exit(1)
+              print(f'Version {current} already exists on PyPI. Skipping PyPI publication, proceeding to MCP Registry.', file=sys.stderr)
+              print('false')
+              sys.exit(0)
 
           # Check if current version is greater than PyPI version
           elif current_parsed > pypi_parsed:
-              print(f'✓ New version ({current}) is greater than PyPI version ({pypi_published}). Proceeding with publication of mcp-arangodb-async to PyPI.')
+              print(f'✓ New version ({current}) is greater than PyPI version ({pypi_published}). Proceeding with PyPI publication.', file=sys.stderr)
+              print('true')
               sys.exit(0)
 
-          # Current version is less than PyPI version
+          # Current version is less than PyPI version (invalid state)
           else:
-              print(f'Error: Current version ({current}) is not greater than the latest PyPI version ({pypi_published}). Please ensure the version number is properly incremented.')
-              print(f'Note: You cannot publish a version that is lower than or equal to an already published version.')
+              print(f'Error: Current version ({current}) is less than the latest PyPI version ({pypi_published}).', file=sys.stderr)
+              print(f'Note: You cannot publish a version lower than an already published version.', file=sys.stderr)
               sys.exit(1)
-          "
+          ")
+          echo "needs_pypi_publish=$result" >> $GITHUB_OUTPUT
+          echo "Needs PyPI publish: $result"
 
-      # Step 3. Builds and publishes to PyPI (if version is greater)
+      # Step 3. Builds and publishes to PyPI (if version is greater than PyPI)
       - name: Build package
-        if: steps.publish_flag.outputs.flag == 'true'
+        if: steps.version_check.outputs.needs_pypi_publish == 'true'
         run: python -m build
 
       - name: Publish to PyPI
-        if: steps.publish_flag.outputs.flag == 'true'
+        if: steps.version_check.outputs.needs_pypi_publish == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
 
-      # Step 4. Waits for PyPI propagation (90s + retry loop with verification)
+      # Step 4. Waits for PyPI propagation (10min + retry loop with verification)
       - name: Wait for PyPI to propagate and verify availability
-        if: steps.publish_flag.outputs.flag == 'true'
+        if: steps.version_check.outputs.needs_pypi_publish == 'true'
         run: |
           VERSION="${{ steps.current_version.outputs.version }}"
-          echo "Waiting 90 seconds for initial PyPI propagation..."
-          sleep 90
+          echo "Waiting 10 minutes for initial PyPI propagation..."
+          sleep 600
 
           echo "Verifying package version $VERSION is available on PyPI..."
           for i in {1..10}; do
@@ -263,10 +270,10 @@ jobs:
               echo "✓ Package version $VERSION is available on PyPI"
               exit 0
             fi
-            echo "Attempt $i/10: Package not yet available, waiting 15s..."
-            sleep 15
+            echo "Attempt $i/10: Package not yet available, waiting 60s..."
+            sleep 60
           done
-          echo "::error::Package version $VERSION not available on PyPI after ~4 minutes"
+          echo "::error::Package version $VERSION not available on PyPI after ~20 minutes"
           exit 1
 
       # Step 5. Updates server.json with the new version (transiently, not committed)
@@ -332,7 +339,11 @@ jobs:
           if [ "${{ steps.publish_flag.outputs.flag }}" != "true" ]; then
             echo "::notice::Workflow skipped: publish_on_pypi is not set to true in pyproject.toml"
           elif [ "${{ job.status }}" == "success" ]; then
-            echo "::notice::Package successfully published to PyPI and MCP Registry"
+            if [ "${{ steps.version_check.outputs.needs_pypi_publish }}" == "true" ]; then
+              echo "::notice::Package successfully published to PyPI and MCP Registry"
+            else
+              echo "::notice::Package already on PyPI. Successfully published to MCP Registry only."
+            fi
             echo "::notice::Published version: ${{ steps.current_version.outputs.version }}"
           else
             echo "::error::Workflow failed. Check the logs above for details."
