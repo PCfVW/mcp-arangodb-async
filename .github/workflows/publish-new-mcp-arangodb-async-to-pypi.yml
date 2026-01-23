@@ -2,7 +2,7 @@
 # WORKFLOW: Build and Publish to PyPI and MCP Registry
 # =============================================================================
 #
-# TRIGGER: Push to master branch when pyproject.toml changes
+# TRIGGER: Push to master branch when pyproject.toml changes, or manual dispatch
 #          (relevant fields: publish_on_pypi and version - see steps 1. & 2.)
 #
 # WHAT IT DOES:
@@ -34,6 +34,7 @@ on:
       - master
     paths:
       - 'pyproject.toml'
+  workflow_dispatch:
 
 jobs:
   check-and-publish:
