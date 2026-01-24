@@ -27,6 +27,15 @@
 #   - server.json: MCP registry manifest (version updated transiently for publish, kept at 0.0.0 in repo)
 #   - README.md: must contain "mcp-name: io.github.PCfVW/mcp-arangodb-async"
 #
+# LESSONS LEARNED (from initial setup, January 2026):
+#   1. .yml vs .yaml - PyPI trusted publisher requires exact workflow filename match
+#   2. 90s vs 10min - PyPI propagation timing was too optimistic
+#   3. registry_type vs registryType - MCP Registry API uses camelCase
+#   4. v1.0.0 vs v1.4.0 - outdated mcp-publisher version
+#   5. mcp-publisher_1.4.0_linux_amd64 vs mcp-publisher_linux_amd64 - asset naming changed
+#   6. 2025-07-09 vs 2025-12-11 - deprecated schema version
+#   7. Missing transport field - required by latest schema ({"type": "stdio"})
+#
 # =============================================================================
 
 name: Build and Publish to PyPI and MCP Registry

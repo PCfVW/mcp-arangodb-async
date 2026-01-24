@@ -54,8 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ✅ **GitHub Actions Workflow Improvements**
 - **PyPI Publication Reliability:**
-  - Increased initial PyPI propagation wait from 30s to 90s
-  - Added retry loop with verification (up to 10 attempts × 15s = ~4 min total)
+  - Increased initial PyPI propagation wait from 30s to 10 minutes
+  - Added retry loop with verification (up to 10 attempts × 60s = ~20 min total)
   - Fixed critical bug: PyPI verification grep pattern now correctly matches JSON format (`"version": "X.Y.Z"` with space)
   - Package availability is now verified before proceeding to MCP Registry publish
 
@@ -63,6 +63,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added retry logic for `mcp-publisher login` (3 attempts with 10s delay)
   - Added retry logic for `mcp-publisher publish` (3 attempts with 10s delay)
   - Server.json version updated transiently (not committed back, kept at 0.0.0 in repo)
+  - Upgraded mcp-publisher from v1.0.0 to v1.4.0 (fixed camelCase handling)
+  - Updated server.json schema to 2025-12-11 with required `transport` field
 
 - **Workflow Documentation:**
   - Added comprehensive header comment explaining trigger, steps, requirements, and key files
@@ -90,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 
 - **Files Modified:**
-  - `.github/workflows/publish-new-mcp-arangodb-async-to-pypi.yaml` - Complete workflow overhaul
+  - `.github/workflows/publish-new-mcp-arangodb-async-to-pypi.yml` - Complete workflow overhaul
   - `README.md` - Typo fixes
   - `docs/index.md` - Tool count update
   - `docs/user-guide/troubleshooting.md` - Tool count update
