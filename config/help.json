@@ -1,0 +1,165 @@
+{
+  "version": "4.2.0",
+  "tools": {
+    "arango_database": {
+      "title": "Database Operations",
+      "description": "Multi-tenancy and database-level operations",
+      "operations": [
+        "list",
+        "get_focused",
+        "switch",
+        "get_resolution",
+        "backup",
+        "restore"
+      ],
+      "examples": [
+        {
+          "code": "action=\"list\"",
+          "description": "List configured databases"
+        },
+        {
+          "code": "action=\"switch\", database=\"default\"",
+          "description": "Switch focused database"
+        }
+      ]
+    },
+    "arango_collection": {
+      "title": "Collection Operations",
+      "description": "CRUD, batch operations, indexing, schema, and backup",
+      "operations": [
+        "insert",
+        "find",
+        "update",
+        "remove",
+        "insert_with_validation",
+        "list",
+        "bulk_insert",
+        "bulk_update",
+        "import",
+        "export",
+        "list_indexes",
+        "create_index",
+        "delete_index",
+        "get_schema",
+        "create_schema",
+        "validate_document",
+        "validate_references",
+        "create",
+        "stats",
+        "drop",
+        "truncate",
+        "backup"
+      ],
+      "examples": [
+        {
+          "code": "action=\"find\", collection=\"notes\"",
+          "description": "Find documents in collection"
+        },
+        {
+          "code": "action=\"create\", collection=\"my_col\"",
+          "description": "Create collection"
+        }
+      ]
+    },
+    "arango_view": {
+      "title": "ArangoSearch View Operations",
+      "description": "Create and manage views and execute search",
+      "operations": [
+        "create",
+        "drop",
+        "list",
+        "get",
+        "update",
+        "search"
+      ],
+      "examples": [
+        {
+          "code": "action=\"list\"",
+          "description": "List views"
+        }
+      ]
+    },
+    "arango_graph": {
+      "title": "Graph Operations",
+      "description": "Graph management, traversal, backup, and analysis",
+      "operations": [
+        "create",
+        "list",
+        "add_vertex_collection",
+        "add_edge_definition",
+        "add_edge",
+        "traverse",
+        "shortest_path",
+        "backup",
+        "restore",
+        "backup_named",
+        "validate_integrity",
+        "statistics"
+      ],
+      "examples": [
+        {
+          "code": "action=\"traverse\", graph=\"tags_graph\", start_vertex=\"tags/rules\", max_depth=1",
+          "description": "Traverse graph"
+        }
+      ]
+    },
+    "arango_admin": {
+      "title": "Unified Administration Operations",
+      "description": "Single admin entry for AQL, template execution, tag graph sync, and log-based edge optimization",
+      "actions": [
+        "aql_query",
+        "aql_explain",
+        "aql_profile",
+        "aql_build",
+        "template_execute",
+        "sync_run",
+        "optimize_run",
+        "quality_check"
+      ],
+      "examples": [
+        {
+          "code": "action=\"aql_query\", query=\"FOR d IN notes LIMIT 5 RETURN d\"",
+          "description": "Run raw AQL query"
+        },
+        {
+          "code": "action=\"template_execute\", name=\"search.quaternary\", params={\"query\": \"tags rule\"}",
+          "description": "Execute template via admin"
+        },
+        {
+          "code": "action=\"sync_run\", dry_run=true",
+          "description": "Dry-run tags/tag_edges sync"
+        },
+        {
+          "code": "action=\"optimize_run\", days=30, dry_run=true",
+          "description": "Dry-run edge optimization"
+        },
+        {
+          "code": "action=\"quality_check\", top_k=10, orphan_limit=20",
+          "description": "Inspect edge quality metrics and orphan tags"
+        }
+      ]
+    },
+    "arango_mcp": {
+      "title": "MCP Metadata Operations",
+      "description": "Tool discovery, workflow context, and usage statistics",
+      "actions": [
+        "search_tools",
+        "list_by_category",
+        "get_workflow",
+        "list_workflows",
+        "usage_stats",
+        "unload"
+      ],
+      "examples": [
+        {
+          "code": "action=\"search_tools\", keywords=[\"admin\"]",
+          "description": "Search tools"
+        },
+        {
+          "code": "action=\"list_workflows\", include_tools=true",
+          "description": "List workflow contexts"
+        }
+      ]
+    }
+  }
+}

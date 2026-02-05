@@ -1,0 +1,71 @@
+{
+  "version": "1.1.0",
+  "contexts": {
+    "baseline": {
+      "description": "Minimal core workflow",
+      "tools": [
+        "arango_database",
+        "arango_collection",
+        "arango_admin",
+        "arango_mcp"
+      ]
+    },
+    "graph_modeling": {
+      "description": "Graph-centric workflow",
+      "tools": [
+        "arango_graph",
+        "arango_collection",
+        "arango_admin",
+        "arango_mcp"
+      ]
+    },
+    "admin_pipeline": {
+      "description": "Daily sync and optimization workflow",
+      "tools": [
+        "arango_admin",
+        "arango_mcp"
+      ]
+    },
+    "full": {
+      "description": "All configured tools",
+      "tools": [
+        "arango_database",
+        "arango_collection",
+        "arango_view",
+        "arango_graph",
+        "arango_admin",
+        "arango_mcp"
+      ]
+    }
+  },
+  "stages": {
+    "setup": {
+      "description": "Initialization and structure checks",
+      "tools": [
+        "arango_database",
+        "arango_collection",
+        "arango_graph",
+        "arango_mcp"
+      ]
+    },
+    "sync": {
+      "description": "Tags and edge synchronization",
+      "tools": [
+        "arango_admin"
+      ]
+    },
+    "optimize": {
+      "description": "Behavior-driven edge optimization",
+      "tools": [
+        "arango_admin"
+      ]
+    },
+    "analysis": {
+      "description": "Query and graph analysis",
+      "tools": [
+        "arango_admin",
+        "arango_graph"
+      ]
+    }
+  }
+}

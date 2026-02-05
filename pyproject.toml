@@ -3,15 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "arango-mcp-server"
-version = "0.1.0"
+name = "mcp-arangodb-async"
+version = "1.0.0"
 description = "A Model Context Protocol server for ArangoDB"
+publish_on_pypi = true  # Set to false to skip publish, Set to true when you want to publish with an increased version number
 readme = "README.md"
 license = "Apache-2.0"
 authors = [
     { name = "Eric Jacopin, eric.jacopin@protonmail.com" },
 ]
-keywords = ["mcp", "arangodb", "database", "model-context-protocol"]
+keywords = ["mcp", "mcp-server", "model-context-protocol", "async", "arangodb", "database", "aql", "graph"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -24,30 +25,36 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "python-arango>=7.6,<8",
+    "python-arango>=8.2.2,<9",
     "python-dotenv>=1.0,<2",
-    "mcp>=1.6",
+    "mcp>=1.18.0",
     "pydantic>=2,<3",
     "jsonschema>=4,<5",
+    "starlette>=0.27.0,<1.0",
+    "uvicorn[standard]>=0.23.0,<1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8,<9",
-    "black>=23.0.0",
+    "pytest-asyncio>=0.24,<2",
+    "black>=25.0.0",
     "ruff>=0.1.0",
+    "tabulate>=0.9.0",
+    "docker>=7.0.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/ravenwits/mcp-server-arangodb-python"
-Repository = "https://github.com/ravenwits/mcp-server-arangodb-python"
-Issues = "https://github.com/ravenwits/mcp-server-arangodb-python/issues"
+Homepage = "https://github.com/PCfVW/mcp-arango-async"
+Repository = "https://github.com/PCfVW/mcp-arango-async"
+Issues = "https://github.com/PCfVW/mcp-arango-async/issues"
 
 [project.scripts]
-arango-server = "mcp_arangodb.entry:main"
+mcp-arangodb-async = "mcp_arangodb_async.__main__:main"
+maa = "mcp_arangodb_async.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["mcp_arangodb"]
+packages = ["mcp_arangodb_async"]
 
 [tool.black]
 line-length = 88
@@ -94,3 +101,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+asyncio_mode = "auto"
+markers = [
+    "asyncio: mark test as async",
+]

@@ -1,0 +1,234 @@
+name: Build and Publish to PyPI
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'pyproject.toml'
+
+jobs:
+  check-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    environment: pypi-release-of-the-master-branch
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip build packaging requests toml
+
+      - name: Check publish flag
+        id: publish_flag
+        run: |
+          publish_flag=$(python -c "
+          import toml
+          import sys
+
+          try:
+              with open('pyproject.toml', 'r') as f:
+                  data = toml.load(f)
+
+              if 'project' not in data:
+                  print('Error: [project] section not found in pyproject.toml', file=sys.stderr)
+                  sys.exit(1)
+
+              if 'publish_on_pypi' not in data['project']:
+                  print('publish_on_pypi field not found, defaulting to false', file=sys.stderr)
+                  print('false')
+                  sys.exit(0)
+
+              publish = str(data['project']['publish_on_pypi']).lower()
+              if publish not in ['true', 'false']:
+                  print(f'Error: publish_on_pypi must be true or false, got {publish}', file=sys.stderr)
+                  print('false')
+                  sys.exit(0)
+              
+              print(f'Found publish flag: {publish}', file=sys.stderr)
+              print(publish)
+          except FileNotFoundError:
+              print('Error: pyproject.toml file not found', file=sys.stderr)
+              print('false')
+              sys.exit(0)
+          except toml.TomlDecodeError as e:
+              print(f'Error: Failed to parse pyproject.toml: {e}', file=sys.stderr)
+              print('false')
+              sys.exit(0)
+          except Exception as e:
+              print(f'Error reading publish flag: {e}', file=sys.stderr)
+              print('false')
+              sys.exit(0)
+          ")
+          echo "flag=$publish_flag" >> $GITHUB_OUTPUT
+          echo "Publish flag is set to: $publish_flag"
+
+      - name: Get current version from pyproject.toml
+        id: current_version
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          current_version=$(python -c "
+          import toml
+          import sys
+
+          try:
+              with open('pyproject.toml', 'r') as f:
+                  data = toml.load(f)
+
+              if 'project' not in data:
+                  print('Error: [project] section not found in pyproject.toml', file=sys.stderr)
+                  sys.exit(1)
+
+              if 'version' not in data['project']:
+                  print('Error: version field not found in [project] section of pyproject.toml', file=sys.stderr)
+                  sys.exit(1)
+
+              version = data['project']['version']
+              if not version or not isinstance(version, str):
+                  print('Error: version field is empty or not a string', file=sys.stderr)
+                  sys.exit(1)
+
+              print(version)
+          except FileNotFoundError:
+              print('Error: pyproject.toml file not found', file=sys.stderr)
+              sys.exit(1)
+          except toml.TomlDecodeError as e:
+              print(f'Error: Failed to parse pyproject.toml: {e}', file=sys.stderr)
+              sys.exit(1)
+          except Exception as e:
+              print(f'Error: Unexpected error reading version: {e}', file=sys.stderr)
+              sys.exit(1)
+          ")
+          echo "version=$current_version" >> $GITHUB_OUTPUT
+
+      - name: Get latest published version from PyPI
+        id: pypi_version
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          pypi_version=$(python -c "
+          import requests
+          import json
+          import sys
+          from packaging import version
+
+          package_name = 'mcp-arangodb-async'
+          pypi_url = f'https://pypi.org/pypi/{package_name}/json'
+
+          try:
+              print(f'Checking PyPI for package: {package_name}', file=sys.stderr)
+              response = requests.get(pypi_url, timeout=30)
+
+              if response.status_code == 404:
+                  print('Package not found on PyPI, using default version 0.0.0', file=sys.stderr)
+                  print('0.0.0')
+              elif response.status_code == 200:
+                  try:
+                      data = response.json()
+                      if 'info' not in data or 'version' not in data['info']:
+                          print('Error: Invalid PyPI API response format', file=sys.stderr)
+                          sys.exit(1)
+
+                      pypi_ver = data['info']['version']
+                      print(f'Found PyPI version: {pypi_ver}', file=sys.stderr)
+
+                      # Validate that it's a proper version string
+                      try:
+                          version.parse(pypi_ver)
+                          print(pypi_ver)
+                      except Exception as e:
+                          print(f'Error: Invalid version format from PyPI: {pypi_ver} - {e}', file=sys.stderr)
+                          sys.exit(1)
+
+                  except json.JSONDecodeError as e:
+                      print(f'Error: Failed to parse PyPI API response: {e}', file=sys.stderr)
+                      sys.exit(1)
+              else:
+                  print(f'Error: PyPI API returned status code {response.status_code}', file=sys.stderr)
+                  sys.exit(1)
+
+          except requests.exceptions.Timeout:
+              print('Error: Timeout while connecting to PyPI API', file=sys.stderr)
+              sys.exit(1)
+          except requests.exceptions.ConnectionError:
+              print('Error: Failed to connect to PyPI API', file=sys.stderr)
+              sys.exit(1)
+          except requests.exceptions.RequestException as e:
+              print(f'Error: Request to PyPI API failed: {e}', file=sys.stderr)
+              sys.exit(1)
+          except Exception as e:
+              print(f'Error: Unexpected error while checking PyPI: {e}', file=sys.stderr)
+              sys.exit(1)
+          ")
+          echo "version=$pypi_version" >> $GITHUB_OUTPUT
+
+      - name: Check if version is greater than PyPI version
+        id: version_check
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: |
+          echo "Current version: ${{ steps.current_version.outputs.version }}"
+          echo "Latest PyPI version: ${{ steps.pypi_version.outputs.version }}"
+
+          # Use Python to compare versions properly with comprehensive error handling
+          python -c "
+          from packaging import version
+          import sys
+
+          current = '${{ steps.current_version.outputs.version }}'
+          pypi_published = '${{ steps.pypi_version.outputs.version }}'
+
+          print(f'Comparing versions: {current} vs {pypi_published}')
+
+          # Validate version strings
+          try:
+              current_parsed = version.parse(current)
+              pypi_parsed = version.parse(pypi_published)
+          except Exception as e:
+              print(f'Error: Failed to parse version strings - {e}', file=sys.stderr)
+              sys.exit(1)
+
+          # Check if versions are the same
+          if current == pypi_published:
+              print(f'Error: Current version ({current}) is the same as the latest PyPI version ({pypi_published}). Please increment the version number.')
+              sys.exit(1)
+
+          # Check if current version is greater than PyPI version
+          elif current_parsed > pypi_parsed:
+              print(f'✓ New version ({current}) is greater than PyPI version ({pypi_published}). Proceeding with publication of mcp-arangodb-async to PyPI.')
+              sys.exit(0)
+
+          # Current version is less than PyPI version
+          else:
+              print(f'Error: Current version ({current}) is not greater than the latest PyPI version ({pypi_published}). Please ensure the version number is properly incremented.')
+              print(f'Note: You cannot publish a version that is lower than or equal to an already published version.')
+              sys.exit(1)
+          "
+
+      - name: Build package
+        if: steps.publish_flag.outputs.flag == 'true'
+        run: python -m build
+
+      - name: Publish to PyPI
+        if: steps.publish_flag.outputs.flag == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Log workflow result
+        run: |
+          if [ "${{ steps.publish_flag.outputs.flag }}" != "true" ]; then
+            echo "::notice::Workflow skipped: publish_on_pypi is not set to true in pyproject.toml"
+          else
+            if [ "${{ steps.version_check.outcome }}" == "success" ]; then
+              echo "::notice::Package successfully published to PyPI"
+              echo "::notice::Published version: ${{ steps.current_version.outputs.version }}"
+            else
+              echo "::warning::Package not published. Version check failed."
+              echo "::warning::Current version: ${{ steps.current_version.outputs.version }}"
+              echo "::warning::PyPI version: ${{ steps.pypi_version.outputs.version }}"
+            fi
+          fi

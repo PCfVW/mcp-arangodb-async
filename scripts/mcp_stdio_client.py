@@ -28,7 +28,7 @@ async def run() -> None:
     # Launch the child server with the same interpreter to avoid PATH/launcher differences
     server_params = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "mcp_arangodb.entry"],
+        args=["-m", "mcp_arangodb_async.entry"],
         env=env,
     )
 

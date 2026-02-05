@@ -1,0 +1,48 @@
+{
+  "collections": [
+    {
+      "name": "cli_test_nodes",
+      "type": "document"
+    },
+    {
+      "name": "cli_test_edges",
+      "type": "edge"
+    }
+  ],
+  "documents": {
+    "cli_test_nodes": [
+      {"_key": "node1", "title": "Test Node 1", "value": 100},
+      {"_key": "node2", "title": "Test Node 2", "value": 200},
+      {"_key": "node3", "title": "Test Node 3", "value": 300}
+    ],
+    "cli_test_edges": [
+      {"_from": "cli_test_nodes/node1", "_to": "cli_test_nodes/node2", "type": "connected"},
+      {"_from": "cli_test_nodes/node2", "_to": "cli_test_nodes/node3", "type": "connected"}
+    ]
+  },
+  "graphs": [
+    {
+      "name": "cli_test_graph",
+      "edgeDefinitions": [
+        {
+          "edge_collection": "cli_test_edges",
+          "from_vertex_collections": ["cli_test_nodes"],
+          "to_vertex_collections": ["cli_test_nodes"]
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "name": "cli_test_view",
+      "type": "arangosearch",
+      "links": {
+        "cli_test_nodes": {
+          "fields": {
+            "title": {}
+          }
+        }
+      }
+    }
+  ]
+}

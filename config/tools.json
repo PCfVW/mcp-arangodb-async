@@ -1,0 +1,41 @@
+{
+  "version": "4.2.0",
+  "tools": [
+    {
+      "name": "arango_database",
+      "category": "database",
+      "description": "Database operations - multi-tenancy support with session switching, configuration management, and backup/restore",
+      "usage": "action=list|get_focused|switch|get_resolution|backup|restore"
+    },
+    {
+      "name": "arango_collection",
+      "category": "collection",
+      "description": "Collection operations - CRUD, batch operations, indexing, schema and backup",
+      "usage": "action=insert|find|update|remove|bulk_insert|..."
+    },
+    {
+      "name": "arango_view",
+      "category": "view",
+      "description": "ArangoSearch view operations - create, manage, search, and analyze views",
+      "usage": "action=create|drop|list|get|update|search"
+    },
+    {
+      "name": "arango_graph",
+      "category": "graph",
+      "description": "Graph operations - management, edge operations, traversal algorithms, backup/restore, and graph analysis",
+      "usage": "action=create|list|add_vertex_collection|add_edge_definition|add_edge|traverse|shortest_path|backup|restore|statistics"
+    },
+    {
+      "name": "arango_admin",
+      "category": "admin",
+      "description": "Unified admin operations - AQL, template execution, tag sync, and edge optimization",
+      "usage": "action=aql_query|aql_explain|aql_profile|aql_build|template_execute|sync_run|optimize_run|quality_check"
+    },
+    {
+      "name": "arango_mcp",
+      "category": "mcp",
+      "description": "MCP metadata operations (tool search, workflows, usage statistics)",
+      "usage": "action=search_tools|list_by_category|get_workflow|list_workflows|usage_stats|unload"
+    }
+  ]
+}

@@ -23,7 +23,7 @@ def get_server_config():
     """Generate MCP Inspector server configuration."""
     return {
         "command": "python",
-        "args": ["-m", "mcp_arangodb.entry"],
+        "args": ["-m", "mcp_arangodb_async.entry"],
         "env": {
             "ARANGO_URL": os.getenv("ARANGO_URL", "http://localhost:8529"),
             "ARANGO_DB": os.getenv("ARANGO_DB", "mcp_arangodb_test"),
