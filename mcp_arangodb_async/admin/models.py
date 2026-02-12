@@ -1,6 +1,6 @@
 """Pydantic models for unified arango_admin tool."""
 
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,6 +24,7 @@ class AdminArgs(BaseModel):
         "sync_run",
         "optimize_run",
         "quality_check",
+        "embedding_run",
     ] = Field(description="Admin operation to perform")
 
     # Shared optional payloads (validated in delegated handlers)
@@ -31,3 +32,33 @@ class AdminArgs(BaseModel):
     bind_vars: Optional[Dict[str, Any]] = Field(default=None, description="AQL bind vars")
     name: Optional[str] = Field(default=None, description="Template name")
     params: Optional[Dict[str, Any]] = Field(default=None, description="Template params")
+
+    # Embedding params (for embedding_run action)
+    embedding_action: Optional[Literal["generate", "search", "status"]] = Field(
+        default=None,
+        description="Embedding sub-action: generate, search, or status. Default: status",
+    )
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="Specific tag labels to generate embeddings for",
+    )
+    model_name: Optional[str] = Field(
+        default=None,
+        description="HuggingFace model name. Default: Qwen/Qwen3-Embedding-0.6B",
+    )
+    batch_size: Optional[int] = Field(
+        default=None,
+        description="Batch size for embedding generation. Default: 64",
+    )
+    top_k: Optional[int] = Field(
+        default=None,
+        description="Max similar tags per query token. Default: 5",
+    )
+    threshold: Optional[float] = Field(
+        default=None,
+        description="Minimum cosine similarity threshold. Default: 0.5",
+    )
+    limit: Optional[int] = Field(
+        default=None,
+        description="Max notes to return. Default: 20",
+    )

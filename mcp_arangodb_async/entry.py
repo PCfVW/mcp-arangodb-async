@@ -109,8 +109,8 @@ DEFAULT_TOOL_META = {
         "operations": ["create", "list", "add_vertex_collection", "add_edge_definition", "add_edge", "traverse", "shortest_path", "backup", "restore", "backup_named", "validate_integrity", "statistics"],
     },
     "arango_admin": {
-        "description": "Unified admin operations - AQL, template execution, tag sync, and edge optimization",
-        "operations": ["aql_query", "aql_explain", "aql_profile", "aql_build", "template_execute", "sync_run", "optimize_run", "quality_check"],
+        "description": "Unified admin operations - AQL, template execution, tag sync, edge optimization, and tag embedding",
+        "operations": ["aql_query", "aql_explain", "aql_profile", "aql_build", "template_execute", "sync_run", "optimize_run", "quality_check", "embedding_run"],
     },
     "arango_mcp": {
         "description": "MCP metadata operations (tool search, workflows, usage statistics)",
@@ -663,7 +663,7 @@ async def run_stdio() -> None:
             write_stream,
             InitializationOptions(
                 server_name="mcp-arangodb-async",
-                server_version="0.3.2",
+                server_version="1.0.1",
                 capabilities=server.get_capabilities(
                     notification_options=NotificationOptions(),
                     experimental_capabilities={},

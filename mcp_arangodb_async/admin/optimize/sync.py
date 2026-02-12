@@ -1,6 +1,6 @@
-"""Operations for arango_admin_sync.
+"""Sync operations - build/update tags and tag_edges from notes.tags.
 
-Builds/updates tags and tag_edges (AND/OR/NOT/XOR) from notes.tags.
+Builds quaternary edges (AND/OR/NOT/XOR) based on co-occurrence statistics.
 """
 
 from __future__ import annotations
@@ -13,8 +13,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Tuple
 
 from arango.database import StandardDatabase
-from ..utility.runtime_defaults import get_admin_defaults
-from ..utility.access_log import log_admin_run
+from ...utility.runtime_defaults import get_admin_defaults
+from ...utility.access_log import log_admin_run
 
 AUTO_EDGE_SOURCES = ["auto", "auto-sync"]
 _TAG_PREFIX_RE = re.compile(r"^[#]+")
@@ -319,7 +319,6 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
         },
     }
 
-    # Persist one admin run log for observability and behavior analysis.
     log_admin_run(
         db,
         action="sync_run",

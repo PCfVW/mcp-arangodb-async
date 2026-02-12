@@ -1,4 +1,4 @@
-"""Admin optimize operations."""
+"""Admin optimize - unified sync, edge optimization, quality check, and embedding."""
 
 from .handler import handle_admin_optimize
 

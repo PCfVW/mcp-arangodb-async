@@ -3,8 +3,7 @@
 Consolidates previously separate tool entrances:
 - arango_aql
 - arango_template
-- arango_admin_sync
-- arango_admin_optimize
+- arango_admin_optimize (sync, optimize, quality_check, embedding)
 """
 
 from __future__ import annotations
@@ -15,7 +14,6 @@ from arango.database import StandardDatabase
 
 from ..aql.handler import handle_aql
 from ..template.handler import handle_template
-from .sync.handler import handle_admin_sync
 from .optimize.handler import handle_admin_optimize
 
 
@@ -37,13 +35,7 @@ def handle_admin(
     if action == "template_execute":
         return handle_template(db, args)
 
-    if action == "sync_run":
-        return handle_admin_sync(db, "run", args)
-
-    if action == "optimize_run":
-        return handle_admin_optimize(db, "run", args)
-
-    if action == "quality_check":
-        return handle_admin_optimize(db, "quality_check", args)
+    if action in ("sync_run", "optimize_run", "quality_check", "embedding_run"):
+        return handle_admin_optimize(db, action, args)
 
     return {"error": f"Unknown admin action: {action}"}
