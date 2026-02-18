@@ -4,6 +4,7 @@ from typing import Any, Dict
 from arango.database import StandardDatabase
 
 from . import operations
+from ..utility.runtime_defaults import get_available_actions
 
 OPERATIONS = {
     # View management
@@ -31,7 +32,13 @@ def handle_view(
         Operation result or error dictionary
     """
     if action not in OPERATIONS:
-        return {"error": f"Unknown view action: {action}"}
+        available = get_available_actions("arango_view")
+        return {
+            "error": f"Unknown action: {action}",
+            "tool": "arango_view",
+            "available_actions": available,
+            "hint": f"Use one of: {', '.join(available)}"
+        }
 
     handler = OPERATIONS[action]
 

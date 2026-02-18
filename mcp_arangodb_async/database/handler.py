@@ -20,6 +20,7 @@ import logging
 from arango.database import StandardDatabase
 
 from .backup import backup_database, restore_database
+from ..utility.runtime_defaults import get_available_actions
 
 logger = logging.getLogger(__name__)
 
@@ -399,9 +400,12 @@ def handle_database(db: StandardDatabase, action: str, args: Optional[Dict[str, 
         Result dictionary from the operation handler
     """
     if action not in OPERATIONS:
+        available = get_available_actions("arango_database")
         return {
-            "error": f"Unknown database action: {action}",
-            "available_actions": list(OPERATIONS.keys())
+            "error": f"Unknown action: {action}",
+            "tool": "arango_database",
+            "available_actions": available,
+            "hint": f"Use one of: {', '.join(available)}"
         }
 
     handler = OPERATIONS[action]

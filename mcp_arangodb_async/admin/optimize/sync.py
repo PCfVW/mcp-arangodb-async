@@ -211,7 +211,7 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
         if p_forward >= and_threshold and p_backward >= and_threshold:
             op = "AND"
             weight = int(round(24 + 20 * min((p_forward + p_backward) / 2.0, 1.0)))
-        elif p_forward >= or_threshold and p_backward >= or_threshold:
+        elif max(p_forward, p_backward) >= or_threshold:
             op = "OR"
             weight = int(round(12 + 16 * min((p_forward + p_backward) / 2.0, 1.0)))
         else:

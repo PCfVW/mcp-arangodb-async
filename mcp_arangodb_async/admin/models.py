@@ -11,7 +11,27 @@ class AdminArgs(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         json_schema_extra={
-            "description": "Unified admin operations: aql/template/sync/optimize"
+            "description": "Unified admin operations: aql/template/sync/optimize",
+            "examples": [
+                {
+                    "action": "aql_query",
+                    "query": "FOR d IN notes FILTER d.weight >= 30 LIMIT 10 RETURN d"
+                },
+                {
+                    "action": "template_execute",
+                    "name": "search.quaternary",
+                    "params": {"query": "tags rule"}
+                },
+                {
+                    "action": "sync_run",
+                    "dry_run": True
+                },
+                {
+                    "action": "embedding_run",
+                    "embedding_action": "generate",
+                    "batch_size": 64
+                }
+            ]
         },
     )
 

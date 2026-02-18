@@ -18,7 +18,7 @@
 
 **Environment Variables Required:**
 ```bash
-ARANGO_URL=http://192.168.10.52:8529
+ARANGO_URL=http://192.168.10.32:8529
 ARANGO_DB=mindnext
 ARANGO_USERNAME=claude
 ARANGO_PASSWORD=claude

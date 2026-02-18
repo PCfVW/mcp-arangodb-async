@@ -48,6 +48,8 @@ Thumbs.db
 *.swp
 *.swo
 ~$*
+.cleanup/
+.backup/
 
 # Project-specific
 **/*.pdf

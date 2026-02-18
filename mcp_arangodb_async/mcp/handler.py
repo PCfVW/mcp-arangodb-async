@@ -7,6 +7,7 @@ from typing import Any, Dict
 from arango.database import StandardDatabase
 
 from . import metadata
+from ..utility.runtime_defaults import get_available_actions
 
 
 OPERATIONS = {
@@ -33,7 +34,13 @@ def handle_mcp(
         Operation result or error dictionary
     """
     if action not in OPERATIONS:
-        return {"error": f"Unknown MCP action: {action}"}
+        available = get_available_actions("arango_mcp")
+        return {
+            "error": f"Unknown action: {action}",
+            "tool": "arango_mcp",
+            "available_actions": available,
+            "hint": f"Use one of: {', '.join(available)}"
+        }
 
     handler = OPERATIONS[action]
 

@@ -4,6 +4,7 @@ from typing import Any, Dict
 from arango.database import StandardDatabase
 
 from . import crud, batch, index, schema, management, backup
+from ..utility.runtime_defaults import get_available_actions
 
 OPERATIONS = {
     # CRUD (crud.py)
@@ -56,7 +57,13 @@ def handle_collection(
         Operation result or error dictionary
     """
     if action not in OPERATIONS:
-        return {"error": f"Unknown collection action: {action}"}
+        available = get_available_actions("arango_collection")
+        return {
+            "error": f"Unknown action: {action}",
+            "tool": "arango_collection",
+            "available_actions": available,
+            "hint": f"Use one of: {', '.join(available)}"
+        }
 
     handler = OPERATIONS[action]
 

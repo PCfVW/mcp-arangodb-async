@@ -56,8 +56,8 @@ class SearchToolsArgs(BaseModel):
         description="Filter by categories: core_data, indexing, validation, schema, query, graph_basic, graph_advanced, aliases, health"
     )
     detail_level: Literal["name", "summary", "full"] = Field(
-        default="summary",
-        description="Level of detail: 'name' (just names), 'summary' (names + descriptions), 'full' (complete schemas)"
+        default="full",
+        description="Level of detail: 'name' (just names), 'summary' (names + descriptions), 'full' (complete schemas with action params)"
     )
 
 

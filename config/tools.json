@@ -4,38 +4,60 @@
     {
       "name": "arango_database",
       "category": "database",
-      "description": "Database operations - multi-tenancy support with session switching, configuration management, and backup/restore",
-      "usage": "action=list|get_focused|switch|get_resolution|backup|restore"
+      "description": "Database operations - multi-tenancy, session switching, backup/restore. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "dispatch": "action-based",
+      "actions": ["list", "get_focused", "switch", "get_resolution", "list_available", "backup", "restore"]
     },
     {
       "name": "arango_collection",
       "category": "collection",
-      "description": "Collection operations - CRUD, batch operations, indexing, schema and backup",
-      "usage": "action=insert|find|update|remove|bulk_insert|..."
+      "description": "Collection operations - CRUD, batch, indexing, schema, backup. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "dispatch": "action-based",
+      "actions": [
+        "insert", "find", "update", "remove", "insert_with_validation", "list",
+        "bulk_insert", "bulk_update", "import", "export",
+        "list_indexes", "create_index", "delete_index",
+        "get_schema", "create_schema", "validate_document", "validate_references",
+        "create", "stats", "drop", "truncate",
+        "backup"
+      ]
     },
     {
       "name": "arango_view",
       "category": "view",
-      "description": "ArangoSearch view operations - create, manage, search, and analyze views",
-      "usage": "action=create|drop|list|get|update|search"
+      "description": "ArangoSearch view operations - create, manage, search, analyze. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "dispatch": "action-based",
+      "actions": ["create", "drop", "list", "get", "update", "search"]
     },
     {
       "name": "arango_graph",
       "category": "graph",
-      "description": "Graph operations - management, edge operations, traversal algorithms, backup/restore, and graph analysis",
-      "usage": "action=create|list|add_vertex_collection|add_edge_definition|add_edge|traverse|shortest_path|backup|restore|statistics"
+      "description": "Graph operations - traversal, edges, shortest path, backup/restore. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "dispatch": "action-based",
+      "actions": [
+        "create", "list", "add_vertex_collection", "add_edge_definition", "add_edge",
+        "traverse", "shortest_path",
+        "backup", "restore", "backup_named",
+        "validate_integrity", "statistics"
+      ]
     },
     {
       "name": "arango_admin",
       "category": "admin",
-      "description": "Unified admin operations - AQL, template execution, tag sync, and edge optimization",
-      "usage": "action=aql_query|aql_explain|aql_profile|aql_build|template_execute|sync_run|optimize_run|quality_check"
+      "description": "Unified admin operations - AQL, templates, tag sync, edge optimization, embedding. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "dispatch": "action-based",
+      "actions": [
+        "aql_query", "aql_explain", "aql_profile", "aql_build",
+        "template_execute",
+        "sync_run", "optimize_run", "quality_check", "embedding_run"
+      ]
     },
     {
       "name": "arango_mcp",
       "category": "mcp",
-      "description": "MCP metadata operations (tool search, workflows, usage statistics)",
-      "usage": "action=search_tools|list_by_category|get_workflow|list_workflows|usage_stats|unload"
+      "description": "MCP metadata - tool search, workflows, usage stats. Use search_tools to query action param details for any tool",
+      "dispatch": "action-based",
+      "actions": ["search_tools", "list_by_category", "get_workflow", "list_workflows", "usage_stats", "unload"]
     }
   ]
 }

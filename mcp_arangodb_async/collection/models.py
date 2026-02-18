@@ -46,7 +46,27 @@ class CollectionArgs(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         json_schema_extra={
-            "description": "Collection tool arguments with action-based dispatch"
+            "description": "Collection tool arguments with action-based dispatch",
+            "examples": [
+                {
+                    "action": "find",
+                    "collection": "notes",
+                    "filter": {"weight": {"$gte": 30}},
+                    "limit": 10
+                },
+                {
+                    "action": "insert",
+                    "collection": "notes",
+                    "document": {"title": "Example", "content": "Test note", "tags": ["demo"]}
+                },
+                {
+                    "action": "create_index",
+                    "collection": "notes",
+                    "type": "persistent",
+                    "fields": ["weight"],
+                    "name": "idx_weight"
+                }
+            ]
         }
     )
 

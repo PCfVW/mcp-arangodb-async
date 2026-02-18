@@ -6,6 +6,7 @@ from typing import Any, Dict
 from arango.database import StandardDatabase
 
 from . import management, edge, traversal, graph_backup, analysis
+from ..utility.runtime_defaults import get_available_actions
 
 
 OPERATIONS = {
@@ -42,13 +43,16 @@ def handle_graph(db: StandardDatabase, operation: str, args: Dict[str, Any]) -> 
         args: Operation arguments
 
     Returns:
-        Operation result
-
-    Raises:
-        ValueError: If operation not found
+        Operation result or error dictionary
     """
     if operation not in OPERATIONS:
-        raise ValueError(f"Unknown graph operation: {operation}")
+        available = get_available_actions("arango_graph")
+        return {
+            "error": f"Unknown action: {operation}",
+            "tool": "arango_graph",
+            "available_actions": available,
+            "hint": f"Use one of: {', '.join(available)}"
+        }
 
     handler = OPERATIONS[operation]
     return handler(db, args)

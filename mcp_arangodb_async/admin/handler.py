@@ -15,6 +15,7 @@ from arango.database import StandardDatabase
 from ..aql.handler import handle_aql
 from ..template.handler import handle_template
 from .optimize.handler import handle_admin_optimize
+from ..utility.runtime_defaults import get_available_actions
 
 
 def handle_admin(
@@ -38,4 +39,10 @@ def handle_admin(
     if action in ("sync_run", "optimize_run", "quality_check", "embedding_run"):
         return handle_admin_optimize(db, action, args)
 
-    return {"error": f"Unknown admin action: {action}"}
+    available = get_available_actions("arango_admin")
+    return {
+        "error": f"Unknown action: {action}",
+        "tool": "arango_admin",
+        "available_actions": available,
+        "hint": f"Use one of: {', '.join(available)}"
+    }

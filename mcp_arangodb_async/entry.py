@@ -39,7 +39,7 @@ from .utility.session import SessionState
 from .utility.multi_db import MultiDatabaseConnectionManager
 from .utility.config_loader import ConfigFileLoader
 from .utility.resolver import resolve_database
-from .utility.runtime_defaults import get_tools_metadata
+from .utility.runtime_defaults import get_tools_metadata, get_action_help
 from .utility.session_utils import extract_session_id
 
 # Module-level variable to store config file path (set by main() before server starts)
@@ -93,27 +93,27 @@ TOOL_MODELS = {
 
 DEFAULT_TOOL_META = {
     "arango_database": {
-        "description": "Database operations - multi-tenancy support with session switching, configuration management, and backup/restore",
+        "description": "Database operations - multi-tenancy, session switching, backup/restore. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
         "operations": ["list", "get_focused", "switch", "get_resolution", "backup", "restore"],
     },
     "arango_collection": {
-        "description": "Collection operations - CRUD with filtering, batch operations (import/export), indexing, schema management, statistics, and backup/restore functionality",
+        "description": "Collection operations - CRUD, batch, indexing, schema, backup. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
         "operations": ["insert", "find", "update", "remove", "insert_with_validation", "list", "bulk_insert", "bulk_update", "import", "export", "list_indexes", "create_index", "delete_index", "get_schema", "create_schema", "validate_document", "validate_references", "create", "stats", "drop", "truncate", "backup"],
     },
     "arango_view": {
-        "description": "ArangoSearch view operations - create, manage, search, and analyze views",
+        "description": "ArangoSearch view operations - create, manage, search, analyze. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
         "operations": ["create", "drop", "list", "get", "update", "search"],
     },
     "arango_graph": {
-        "description": "Graph operations - management, edge operations, traversal algorithms, backup/restore, and graph analysis",
+        "description": "Graph operations - traversal, edges, shortest path, backup/restore. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
         "operations": ["create", "list", "add_vertex_collection", "add_edge_definition", "add_edge", "traverse", "shortest_path", "backup", "restore", "backup_named", "validate_integrity", "statistics"],
     },
     "arango_admin": {
-        "description": "Unified admin operations - AQL, template execution, tag sync, edge optimization, and tag embedding",
+        "description": "Unified admin operations - AQL, templates, tag sync, edge optimization, embedding. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
         "operations": ["aql_query", "aql_explain", "aql_profile", "aql_build", "template_execute", "sync_run", "optimize_run", "quality_check", "embedding_run"],
     },
     "arango_mcp": {
-        "description": "MCP metadata operations (tool search, workflows, usage statistics)",
+        "description": "MCP metadata - tool search, workflows, usage stats. Use search_tools to query action param details for any tool",
         "operations": ["search_tools", "list_by_category", "get_workflow", "list_workflows", "usage_stats", "unload"],
     },
 }
@@ -576,15 +576,23 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[types.Content]
         if session_state:
             session_state.track_tool_usage(session_id, name)
 
+        # Auto-attach action help on error responses
+        if isinstance(result, dict) and "error" in result and "action_help" not in result:
+            action_help = get_action_help(name, action)
+            if action_help:
+                result["action_help"] = action_help
+
         return _json_content(result)
     except Exception as e:
         logger.exception("Error executing tool '%s'", name)
-        return _json_content(
-            {
-                "error": str(e),
-                "tool": name,
-            }
-        )
+        error_result: Dict[str, Any] = {
+            "error": str(e),
+            "tool": name,
+        }
+        action_help = get_action_help(name, action)
+        if action_help:
+            error_result["action_help"] = action_help
+        return _json_content(error_result)
 
 
 # Test compatibility shim: expose handlers dict expected by integration tests

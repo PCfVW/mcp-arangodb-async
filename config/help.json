@@ -4,162 +4,565 @@
     "arango_database": {
       "title": "Database Operations",
       "description": "Multi-tenancy and database-level operations",
-      "operations": [
-        "list",
-        "get_focused",
-        "switch",
-        "get_resolution",
-        "backup",
-        "restore"
-      ],
-      "examples": [
-        {
-          "code": "action=\"list\"",
-          "description": "List configured databases"
+      "actions": {
+        "list": {
+          "description": "List all configured databases",
+          "params": {},
+          "example": {"action": "list"}
         },
-        {
-          "code": "action=\"switch\", database=\"default\"",
-          "description": "Switch focused database"
+        "get_focused": {
+          "description": "Get current focused database key for session",
+          "params": {},
+          "example": {"action": "get_focused"}
+        },
+        "switch": {
+          "description": "Switch focused database for session",
+          "params": {
+            "database": {"type": "string", "required": true, "description": "Database key to switch to"}
+          },
+          "example": {"action": "switch", "database": "default"}
+        },
+        "get_resolution": {
+          "description": "Get database resolution priority chain",
+          "params": {},
+          "example": {"action": "get_resolution"}
+        },
+        "list_available": {
+          "description": "List available database keys from config",
+          "params": {},
+          "example": {"action": "list_available"}
+        },
+        "backup": {
+          "description": "Backup database collections",
+          "params": {
+            "output_dir": {"type": "string", "required": false, "description": "Output directory"},
+            "collections": {"type": "array", "required": false, "description": "Collections to backup"},
+            "type": {"type": "string", "required": false, "description": "Backup type: collection|graph|view|all", "default": "all"}
+          },
+          "example": {"action": "backup", "output_dir": "backups/db"}
+        },
+        "restore": {
+          "description": "Restore database from backup",
+          "params": {
+            "input_dir": {"type": "string", "required": true, "description": "Backup directory"},
+            "conflict": {"type": "string", "required": false, "description": "Conflict resolution: skip|replace|update", "default": "skip"}
+          },
+          "example": {"action": "restore", "input_dir": "backups/db", "conflict": "skip"}
         }
-      ]
+      }
     },
     "arango_collection": {
       "title": "Collection Operations",
       "description": "CRUD, batch operations, indexing, schema, and backup",
-      "operations": [
-        "insert",
-        "find",
-        "update",
-        "remove",
-        "insert_with_validation",
-        "list",
-        "bulk_insert",
-        "bulk_update",
-        "import",
-        "export",
-        "list_indexes",
-        "create_index",
-        "delete_index",
-        "get_schema",
-        "create_schema",
-        "validate_document",
-        "validate_references",
-        "create",
-        "stats",
-        "drop",
-        "truncate",
-        "backup"
-      ],
-      "examples": [
-        {
-          "code": "action=\"find\", collection=\"notes\"",
-          "description": "Find documents in collection"
+      "actions": {
+        "insert": {
+          "description": "Insert a document",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "document": {"type": "object", "required": true}
+          },
+          "example": {"action": "insert", "collection": "notes", "document": {"title": "Test", "content": "Example"}}
         },
-        {
-          "code": "action=\"create\", collection=\"my_col\"",
-          "description": "Create collection"
+        "find": {
+          "description": "Find documents by key or filter",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "key": {"type": "string", "required": false, "description": "Document key for direct lookup"},
+            "filter": {"type": "object", "required": false, "description": "Filter with MongoDB-style operators ($gt,$gte,$lt,$lte,$ne,$in)"},
+            "limit": {"type": "integer", "required": false, "default": 100}
+          },
+          "example": {"action": "find", "collection": "notes", "filter": {"weight": {"$gte": 30}}, "limit": 10}
+        },
+        "update": {
+          "description": "Update a document by key",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "key": {"type": "string", "required": true},
+            "update": {"type": "object", "required": true}
+          },
+          "example": {"action": "update", "collection": "notes", "key": "12345", "update": {"weight": 50}}
+        },
+        "remove": {
+          "description": "Remove a document by key",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "key": {"type": "string", "required": true}
+          },
+          "example": {"action": "remove", "collection": "notes", "key": "12345"}
+        },
+        "insert_with_validation": {
+          "description": "Insert with reference field validation",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "document": {"type": "object", "required": true},
+            "reference_fields": {"type": "array", "required": false, "description": "Fields to validate as references"}
+          },
+          "example": {"action": "insert_with_validation", "collection": "notes", "document": {"title": "Test"}, "reference_fields": ["source_ref"]}
+        },
+        "list": {
+          "description": "List all collections",
+          "params": {},
+          "example": {"action": "list"}
+        },
+        "bulk_insert": {
+          "description": "Insert multiple documents",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "documents": {"type": "array", "required": true},
+            "batch_size": {"type": "integer", "default": 1000},
+            "on_error": {"type": "string", "default": "stop", "description": "stop|continue|ignore"}
+          },
+          "example": {"action": "bulk_insert", "collection": "notes", "documents": [{"title": "Doc1"}, {"title": "Doc2"}]}
+        },
+        "bulk_update": {
+          "description": "Update multiple documents",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "updates": {"type": "array", "required": true, "description": "Each must have 'key' and update fields"},
+            "batch_size": {"type": "integer", "default": 1000},
+            "on_error": {"type": "string", "default": "stop", "description": "stop|continue|ignore"}
+          },
+          "example": {"action": "bulk_update", "collection": "notes", "updates": [{"key": "123", "weight": 50}]}
+        },
+        "import": {
+          "description": "Import document from file",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "file_path": {"type": "string", "required": true},
+            "options": {"type": "object", "required": false, "description": "Import options (title, source, weight, tags)"}
+          },
+          "example": {"action": "import", "collection": "notes", "file_path": "/path/to/file.md"}
+        },
+        "export": {
+          "description": "Export documents to file",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "key": {"type": "string", "required": false, "description": "Single document key"},
+            "filter": {"type": "object", "required": false, "description": "Filter for batch export"},
+            "options": {"type": "object", "required": false, "description": "Export options (output_dir, limit)"}
+          },
+          "example": {"action": "export", "collection": "notes", "key": "12345"}
+        },
+        "list_indexes": {
+          "description": "List indexes for a collection",
+          "params": {
+            "collection": {"type": "string", "required": true}
+          },
+          "example": {"action": "list_indexes", "collection": "notes"}
+        },
+        "create_index": {
+          "description": "Create an index on collection",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "type": {"type": "string", "required": true, "description": "persistent|hash|skiplist|ttl|fulltext|geo"},
+            "fields": {"type": "array", "required": true},
+            "unique": {"type": "boolean", "default": false},
+            "name": {"type": "string", "required": false}
+          },
+          "example": {"action": "create_index", "collection": "notes", "type": "persistent", "fields": ["weight"], "name": "idx_weight"}
+        },
+        "delete_index": {
+          "description": "Delete an index",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "id_or_name": {"type": "string", "required": true, "description": "Index ID or name"}
+          },
+          "example": {"action": "delete_index", "collection": "notes", "id_or_name": "idx_weight"}
+        },
+        "get_schema": {
+          "description": "Get stored JSON Schema for a collection",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "schema_name": {"type": "string", "default": "default"}
+          },
+          "example": {"action": "get_schema", "collection": "notes"}
+        },
+        "create_schema": {
+          "description": "Create/store a JSON Schema",
+          "params": {
+            "name": {"type": "string", "required": true},
+            "collection": {"type": "string", "required": true},
+            "schema": {"type": "object", "required": true, "description": "JSON Schema draft-07"}
+          },
+          "example": {"action": "create_schema", "name": "notes_schema", "collection": "notes", "schema": {"type": "object", "required": ["title"]}}
+        },
+        "validate_document": {
+          "description": "Validate a document against schema",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "document": {"type": "object", "required": true},
+            "schema_name": {"type": "string", "required": false},
+            "schema": {"type": "object", "required": false, "description": "Inline schema (alternative to schema_name)"}
+          },
+          "example": {"action": "validate_document", "collection": "notes", "document": {"title": "Test"}, "schema_name": "default"}
+        },
+        "validate_references": {
+          "description": "Validate reference fields in collection",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "reference_fields": {"type": "array", "required": true},
+            "fix_invalid": {"type": "boolean", "default": false}
+          },
+          "example": {"action": "validate_references", "collection": "notes", "reference_fields": ["source_ref"]}
+        },
+        "create": {
+          "description": "Create a new collection",
+          "params": {
+            "name": {"type": "string", "required": true},
+            "type": {"type": "string", "default": "document", "description": "document|edge"}
+          },
+          "example": {"action": "create", "name": "my_collection", "type": "document"}
+        },
+        "stats": {
+          "description": "Get collection statistics",
+          "params": {
+            "collection": {"type": "string", "required": true}
+          },
+          "example": {"action": "stats", "collection": "notes"}
+        },
+        "drop": {
+          "description": "Drop a collection (irreversible)",
+          "params": {
+            "collection": {"type": "string", "required": true}
+          },
+          "example": {"action": "drop", "collection": "temp_collection"}
+        },
+        "truncate": {
+          "description": "Remove all documents, keep structure",
+          "params": {
+            "collection": {"type": "string", "required": true}
+          },
+          "example": {"action": "truncate", "collection": "temp_collection"}
+        },
+        "backup": {
+          "description": "Backup collection data",
+          "params": {
+            "collection": {"type": "string", "required": false, "description": "Single collection"},
+            "collections": {"type": "array", "required": false, "description": "Multiple collections"},
+            "output_dir": {"type": "string", "required": false},
+            "doc_limit": {"type": "integer", "required": false}
+          },
+          "example": {"action": "backup", "collection": "notes", "output_dir": "backups/"}
         }
-      ]
+      }
     },
     "arango_view": {
       "title": "ArangoSearch View Operations",
-      "description": "Create and manage views and execute search",
-      "operations": [
-        "create",
-        "drop",
-        "list",
-        "get",
-        "update",
-        "search"
-      ],
-      "examples": [
-        {
-          "code": "action=\"list\"",
-          "description": "List views"
+      "description": "Create and manage ArangoSearch views",
+      "actions": {
+        "create": {
+          "description": "Create an ArangoSearch view",
+          "params": {
+            "name": {"type": "string", "required": true, "description": "View name"},
+            "type": {"type": "string", "default": "arangosearch", "description": "View type"},
+            "properties": {"type": "object", "required": false, "description": "View configuration properties"}
+          },
+          "example": {"action": "create", "name": "notes_view", "properties": {"links": {"notes": {"fields": {"title": {"analyzers": ["text_en"]}}}}}}
+        },
+        "drop": {
+          "description": "Drop an ArangoSearch view",
+          "params": {
+            "name": {"type": "string", "required": true}
+          },
+          "example": {"action": "drop", "name": "notes_view"}
+        },
+        "list": {
+          "description": "List all views",
+          "params": {},
+          "example": {"action": "list"}
+        },
+        "get": {
+          "description": "Get view properties",
+          "params": {
+            "name": {"type": "string", "required": true}
+          },
+          "example": {"action": "get", "name": "notes_view"}
+        },
+        "update": {
+          "description": "Update view properties",
+          "params": {
+            "name": {"type": "string", "required": true},
+            "properties": {"type": "object", "required": true, "description": "New properties to apply"}
+          },
+          "example": {"action": "update", "name": "notes_view", "properties": {"consolidationIntervalMsec": 5000}}
+        },
+        "search": {
+          "description": "Execute search query against a view",
+          "params": {
+            "name": {"type": "string", "required": true, "description": "View name"},
+            "query": {"type": "string", "required": true, "description": "AQL search query"},
+            "bind_vars": {"type": "object", "required": false}
+          },
+          "example": {"action": "search", "name": "notes_view", "query": "FOR d IN notes_view SEARCH ANALYZER(d.title IN TOKENS('example', 'text_en'), 'text_en') RETURN d"}
         }
-      ]
+      }
     },
     "arango_graph": {
       "title": "Graph Operations",
       "description": "Graph management, traversal, backup, and analysis",
-      "operations": [
-        "create",
-        "list",
-        "add_vertex_collection",
-        "add_edge_definition",
-        "add_edge",
-        "traverse",
-        "shortest_path",
-        "backup",
-        "restore",
-        "backup_named",
-        "validate_integrity",
-        "statistics"
-      ],
-      "examples": [
-        {
-          "code": "action=\"traverse\", graph=\"tags_graph\", start_vertex=\"tags/rules\", max_depth=1",
-          "description": "Traverse graph"
+      "actions": {
+        "create": {
+          "description": "Create a named graph",
+          "params": {
+            "name": {"type": "string", "required": true},
+            "edge_definitions": {"type": "array", "required": false, "description": "List of {edge_collection, from_collections, to_collections}"},
+            "create_collections": {"type": "boolean", "default": true, "description": "Auto-create collections"}
+          },
+          "example": {"action": "create", "name": "tags_graph", "edge_definitions": [{"edge_collection": "tag_edges", "from_collections": ["tags"], "to_collections": ["tags"]}]}
+        },
+        "list": {
+          "description": "List all graphs",
+          "params": {},
+          "example": {"action": "list"}
+        },
+        "add_vertex_collection": {
+          "description": "Add vertex collection to graph",
+          "params": {
+            "graph": {"type": "string", "required": true},
+            "collection": {"type": "string", "required": true}
+          },
+          "example": {"action": "add_vertex_collection", "graph": "tags_graph", "collection": "notes"}
+        },
+        "add_edge_definition": {
+          "description": "Add edge definition to graph",
+          "params": {
+            "graph": {"type": "string", "required": true},
+            "edge_collection": {"type": "string", "required": true},
+            "from_collections": {"type": "array", "required": true},
+            "to_collections": {"type": "array", "required": true}
+          },
+          "example": {"action": "add_edge_definition", "graph": "tags_graph", "edge_collection": "tag_edges", "from_collections": ["tags"], "to_collections": ["tags"]}
+        },
+        "add_edge": {
+          "description": "Insert an edge document",
+          "params": {
+            "collection": {"type": "string", "required": true, "description": "Edge collection name"},
+            "from_id": {"type": "string", "required": true, "description": "Source vertex _id"},
+            "to_id": {"type": "string", "required": true, "description": "Target vertex _id"},
+            "attributes": {"type": "object", "required": false, "description": "Additional edge attributes"}
+          },
+          "example": {"action": "add_edge", "collection": "tag_edges", "from_id": "tags/python", "to_id": "tags/coding", "attributes": {"op": "AND", "weight": 20}}
+        },
+        "traverse": {
+          "description": "Graph traversal from start vertex",
+          "params": {
+            "start_vertex": {"type": "string", "required": true, "description": "Start vertex _id (e.g. tags/python)"},
+            "graph": {"type": "string", "required": false, "description": "Named graph (or use edge_collections)"},
+            "edge_collections": {"type": "array", "required": false, "description": "Edge collections (alternative to graph)"},
+            "direction": {"type": "string", "default": "OUTBOUND", "description": "OUTBOUND|INBOUND|ANY"},
+            "min_depth": {"type": "integer", "default": 1},
+            "max_depth": {"type": "integer", "default": 1},
+            "return_paths": {"type": "boolean", "default": false},
+            "limit": {"type": "integer", "required": false}
+          },
+          "example": {"action": "traverse", "graph": "tags_graph", "start_vertex": "tags/python", "max_depth": 2}
+        },
+        "shortest_path": {
+          "description": "Find shortest path between two vertices",
+          "params": {
+            "start_vertex": {"type": "string", "required": true},
+            "end_vertex": {"type": "string", "required": true},
+            "graph": {"type": "string", "required": false},
+            "edge_collections": {"type": "array", "required": false},
+            "direction": {"type": "string", "default": "OUTBOUND"}
+          },
+          "example": {"action": "shortest_path", "graph": "tags_graph", "start_vertex": "tags/python", "end_vertex": "tags/ai"}
+        },
+        "backup": {
+          "description": "Backup a named graph",
+          "params": {
+            "graph_name": {"type": "string", "required": true},
+            "output_dir": {"type": "string", "required": false},
+            "include_metadata": {"type": "boolean", "default": true},
+            "doc_limit": {"type": "integer", "required": false}
+          },
+          "example": {"action": "backup", "graph_name": "tags_graph"}
+        },
+        "restore": {
+          "description": "Restore graph from backup",
+          "params": {
+            "input_dir": {"type": "string", "required": true},
+            "graph_name": {"type": "string", "required": false},
+            "conflict_resolution": {"type": "string", "default": "error", "description": "error|skip|replace"},
+            "validate_integrity": {"type": "boolean", "default": true}
+          },
+          "example": {"action": "restore", "input_dir": "backups/tags_graph"}
+        },
+        "backup_named": {
+          "description": "Backup all named graphs",
+          "params": {
+            "output_file": {"type": "string", "required": false},
+            "graph_names": {"type": "array", "required": false, "description": "Specific graphs to backup"}
+          },
+          "example": {"action": "backup_named"}
+        },
+        "validate_integrity": {
+          "description": "Validate graph integrity (orphaned edges, constraints)",
+          "params": {
+            "graph": {"type": "string", "required": false, "description": "Named graph (optional, checks all if omitted)"},
+            "check_orphaned_edges": {"type": "boolean", "default": true},
+            "check_constraints": {"type": "boolean", "default": true},
+            "return_details": {"type": "boolean", "default": false}
+          },
+          "example": {"action": "validate_integrity", "graph": "tags_graph"}
+        },
+        "statistics": {
+          "description": "Graph statistics (degree distribution, connectivity)",
+          "params": {
+            "graph": {"type": "string", "required": false},
+            "include_degree_distribution": {"type": "boolean", "default": true},
+            "include_connectivity": {"type": "boolean", "default": true},
+            "sample_size": {"type": "integer", "required": false}
+          },
+          "example": {"action": "statistics", "graph": "tags_graph"}
         }
-      ]
+      }
     },
     "arango_admin": {
       "title": "Unified Administration Operations",
-      "description": "Single admin entry for AQL, template execution, tag graph sync, and log-based edge optimization",
-      "actions": [
-        "aql_query",
-        "aql_explain",
-        "aql_profile",
-        "aql_build",
-        "template_execute",
-        "sync_run",
-        "optimize_run",
-        "quality_check"
-      ],
-      "examples": [
-        {
-          "code": "action=\"aql_query\", query=\"FOR d IN notes LIMIT 5 RETURN d\"",
-          "description": "Run raw AQL query"
+      "description": "AQL, template execution, tag sync, edge optimization, embedding",
+      "actions": {
+        "aql_query": {
+          "description": "Execute raw AQL query",
+          "params": {
+            "query": {"type": "string", "required": true, "description": "AQL query string"},
+            "bind_vars": {"type": "object", "required": false}
+          },
+          "example": {"action": "aql_query", "query": "FOR d IN notes LIMIT 5 RETURN d"}
         },
-        {
-          "code": "action=\"template_execute\", name=\"search.quaternary\", params={\"query\": \"tags rule\"}",
-          "description": "Execute template via admin"
+        "aql_explain": {
+          "description": "Explain AQL query execution plan",
+          "params": {
+            "query": {"type": "string", "required": true},
+            "bind_vars": {"type": "object", "required": false},
+            "max_plans": {"type": "integer", "default": 1},
+            "suggest_indexes": {"type": "boolean", "default": true}
+          },
+          "example": {"action": "aql_explain", "query": "FOR d IN notes FILTER d.weight > 30 RETURN d"}
         },
-        {
-          "code": "action=\"sync_run\", dry_run=true",
-          "description": "Dry-run tags/tag_edges sync"
+        "aql_profile": {
+          "description": "Profile AQL query with execution stats",
+          "params": {
+            "query": {"type": "string", "required": true},
+            "bind_vars": {"type": "object", "required": false},
+            "max_plans": {"type": "integer", "default": 1}
+          },
+          "example": {"action": "aql_profile", "query": "FOR d IN notes RETURN d"}
         },
-        {
-          "code": "action=\"optimize_run\", days=30, dry_run=true",
-          "description": "Dry-run edge optimization"
+        "aql_build": {
+          "description": "Build AQL query from structured parameters",
+          "params": {
+            "collection": {"type": "string", "required": true},
+            "filters": {"type": "array", "required": false, "description": "Filter conditions"},
+            "sort": {"type": "array", "required": false},
+            "limit": {"type": "integer", "required": false},
+            "return_fields": {"type": "array", "required": false}
+          },
+          "example": {"action": "aql_build", "collection": "notes", "filters": [{"field": "weight", "op": ">=", "value": 30}], "limit": 10}
         },
-        {
-          "code": "action=\"quality_check\", top_k=10, orphan_limit=20",
-          "description": "Inspect edge quality metrics and orphan tags"
+        "template_execute": {
+          "description": "Execute a named query template",
+          "params": {
+            "name": {"type": "string", "required": true, "description": "Template name (e.g. search.quaternary)"},
+            "params": {"type": "object", "required": false, "description": "Template parameters"}
+          },
+          "example": {"action": "template_execute", "name": "search.quaternary", "params": {"query": "tags rule"}}
+        },
+        "sync_run": {
+          "description": "Sync tags and tag_edges from notes.tags",
+          "params": {
+            "dry_run": {"type": "boolean", "default": false},
+            "min_cooccur_count": {"type": "integer", "default": 2},
+            "and_threshold": {"type": "number", "default": 0.8},
+            "or_threshold": {"type": "number", "default": 0.3},
+            "clear_previous_auto": {"type": "boolean", "default": true}
+          },
+          "example": {"action": "sync_run", "dry_run": true}
+        },
+        "optimize_run": {
+          "description": "Optimize edge weights from access_logs",
+          "params": {
+            "dry_run": {"type": "boolean", "default": false},
+            "days": {"type": "integer", "default": 30},
+            "alpha": {"type": "number", "default": 0.35},
+            "half_life_days": {"type": "number", "default": 14.0},
+            "enable_on": {"type": "integer", "default": 18},
+            "disable_below": {"type": "integer", "default": 12}
+          },
+          "example": {"action": "optimize_run", "days": 30, "dry_run": true}
+        },
+        "quality_check": {
+          "description": "Check graph quality metrics and orphan tags",
+          "params": {
+            "top_k": {"type": "integer", "default": 10},
+            "orphan_limit": {"type": "integer", "default": 20},
+            "min_confidence": {"type": "number", "default": 0.35},
+            "enable_on": {"type": "integer", "default": 18},
+            "disable_below": {"type": "integer", "default": 12}
+          },
+          "example": {"action": "quality_check", "top_k": 10, "orphan_limit": 20}
+        },
+        "embedding_run": {
+          "description": "Tag embedding operations (generate/search/status)",
+          "params": {
+            "embedding_action": {"type": "string", "default": "status", "description": "generate|search|status"},
+            "model_name": {"type": "string", "required": false, "description": "HuggingFace model (default: Qwen3-Embedding-0.6B)"},
+            "batch_size": {"type": "integer", "default": 64, "description": "For generate"},
+            "tags": {"type": "array", "required": false, "description": "Specific tags to generate embeddings for"},
+            "query": {"type": "string", "required": false, "description": "Search query text (for search)"},
+            "top_k": {"type": "integer", "default": 5, "description": "For search"},
+            "threshold": {"type": "number", "default": 0.5, "description": "Min cosine similarity (for search)"},
+            "limit": {"type": "integer", "default": 20, "description": "Max results (for search)"}
+          },
+          "example": {"action": "embedding_run", "embedding_action": "generate", "batch_size": 64}
         }
-      ]
+      }
     },
     "arango_mcp": {
       "title": "MCP Metadata Operations",
       "description": "Tool discovery, workflow context, and usage statistics",
-      "actions": [
-        "search_tools",
-        "list_by_category",
-        "get_workflow",
-        "list_workflows",
-        "usage_stats",
-        "unload"
-      ],
-      "examples": [
-        {
-          "code": "action=\"search_tools\", keywords=[\"admin\"]",
-          "description": "Search tools"
+      "actions": {
+        "search_tools": {
+          "description": "Search tools by keywords with full param details",
+          "params": {
+            "keywords": {"type": "array", "required": true, "description": "Keywords to search"},
+            "categories": {"type": "array", "required": false, "description": "Filter by categories"},
+            "detail_level": {"type": "string", "default": "full", "description": "name|summary|full"}
+          },
+          "example": {"action": "search_tools", "keywords": ["collection"]}
         },
-        {
-          "code": "action=\"list_workflows\", include_tools=true",
-          "description": "List workflow contexts"
+        "list_by_category": {
+          "description": "List tools grouped by category",
+          "params": {
+            "category": {"type": "string", "required": false, "description": "Filter by category (omit for all)"}
+          },
+          "example": {"action": "list_by_category"}
+        },
+        "get_workflow": {
+          "description": "Get active workflow context",
+          "params": {},
+          "example": {"action": "get_workflow"}
+        },
+        "list_workflows": {
+          "description": "List available workflow contexts",
+          "params": {
+            "include_tools": {"type": "boolean", "default": false}
+          },
+          "example": {"action": "list_workflows", "include_tools": true}
+        },
+        "usage_stats": {
+          "description": "Get tool usage statistics",
+          "params": {},
+          "example": {"action": "usage_stats"}
+        },
+        "unload": {
+          "description": "Unload tools from active context",
+          "params": {
+            "tool_names": {"type": "array", "required": true}
+          },
+          "example": {"action": "unload", "tool_names": ["arango_view"]}
         }
-      ]
+      }
     }
   }
 }

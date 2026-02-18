@@ -203,7 +203,7 @@ def _get_session_context(args: Dict[str, Any]) -> tuple:
 def search_tools(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     keywords = [kw.lower() for kw in args["keywords"]]
     categories_filter = args.get("categories")
-    detail_level = args.get("detail_level", "summary")
+    detail_level = args.get("detail_level", "full")
 
     tools = _load_tools()
     categories = _get_tool_categories()
