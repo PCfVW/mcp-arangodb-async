@@ -21,7 +21,7 @@ from starlette.routing import Route
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
-from .health import health_check
+from .utility.health import health_check
 
 logger = logging.getLogger(__name__)
 

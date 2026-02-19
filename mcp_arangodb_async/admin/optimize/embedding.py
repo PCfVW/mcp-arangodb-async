@@ -9,6 +9,8 @@ from __future__ import annotations
 import logging
 import re
 import time
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from arango.database import StandardDatabase
@@ -16,6 +18,17 @@ from arango.database import StandardDatabase
 from .engine import encode_texts, get_model_info
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _safe_cursor(cursor):
+    try:
+        yield cursor
+    finally:
+        try:
+            cursor.close()
+        except Exception:
+            pass
 
 
 def embedding_generate(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -38,7 +51,8 @@ def embedding_generate(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
             "FOR t IN tags FILTER t.embedding == null RETURN { _key: t._key, label: t.label }"
         )
 
-    tags_to_process = list(cursor)
+    with _safe_cursor(cursor):
+        tags_to_process = list(cursor)
 
     if not tags_to_process:
         return {"message": "All tags already have embeddings", "count": 0}
@@ -55,7 +69,7 @@ def embedding_generate(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
     dimension = len(embeddings[0]) if embeddings else 0
 
     model_info = get_model_info()
-    now = int(time.time() * 1000)
+    embedded_at = datetime.now(timezone.utc).isoformat()
 
     updates = []
     for key, label, emb in zip(keys, labels, embeddings):
@@ -64,11 +78,11 @@ def embedding_generate(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
             "embedding": emb,
             "embedding_text": label,
             "embedding_model": model_info["model_name"],
-            "embedded_at": now,
+            "embedded_at": embedded_at,
         })
 
     start_write = time.time()
-    db.aql.execute(
+    write_cursor = db.aql.execute(
         """
         FOR item IN @updates
             UPDATE { _key: item._key } WITH {
@@ -80,6 +94,8 @@ def embedding_generate(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, 
         """,
         bind_vars={"updates": updates},
     )
+    with _safe_cursor(write_cursor):
+        pass  # write query returns no documents; cursor must still be closed
     elapsed_write = time.time() - start_write
 
     return {
@@ -122,11 +138,12 @@ def embedding_search(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, An
             """,
             bind_vars={"qvec": vec, "threshold": threshold, "top_k": top_k},
         )
-        for row in cursor:
-            label = row["label"]
-            score = row["score"]
-            if label not in all_matched_tags or score > all_matched_tags[label]:
-                all_matched_tags[label] = score
+        with _safe_cursor(cursor):
+            for row in cursor:
+                label = row["label"]
+                score = row["score"]
+                if label not in all_matched_tags or score > all_matched_tags[label]:
+                    all_matched_tags[label] = score
 
     if not all_matched_tags:
         return {
@@ -169,7 +186,8 @@ def embedding_search(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, An
         bind_vars={"tag_scores": tag_scores_map, "limit": limit},
     )
 
-    notes = list(cursor)
+    with _safe_cursor(cursor):
+        notes = list(cursor)
 
     return {
         "query": query_text,
@@ -199,7 +217,8 @@ def embedding_status(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, An
         }
         """
     )
-    result = list(cursor)[0]
+    with _safe_cursor(cursor):
+        result = list(cursor)[0]
     result["engine"] = get_model_info()
     return result
 

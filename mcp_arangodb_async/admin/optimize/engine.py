@@ -7,6 +7,7 @@ All operations are synchronous (CPU inference, fast for short texts).
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 _model = None
 _tokenizer = None
 _model_name: Optional[str] = None
+_load_lock = threading.Lock()
 
 DEFAULT_MODEL = "Qwen/Qwen3-Embedding-0.6B"
 
@@ -27,20 +29,27 @@ def _load_model(model_name: str | None = None) -> Tuple:
 
     target = model_name or DEFAULT_MODEL
 
+    # Fast path: model already loaded for this target
     if _model is not None and _model_name == target:
         return _model, _tokenizer
 
-    logger.info("Loading embedding model: %s", target)
+    with _load_lock:
+        # Re-check inside lock to avoid double-load
+        if _model is not None and _model_name == target:
+            return _model, _tokenizer
 
-    import torch
-    from transformers import AutoModel, AutoTokenizer
+        logger.info("Loading embedding model: %s", target)
 
-    _tokenizer = AutoTokenizer.from_pretrained(target, trust_remote_code=True)
-    _model = AutoModel.from_pretrained(target, trust_remote_code=True)
-    _model.eval()
-    _model_name = target
+        import torch
+        from transformers import AutoModel, AutoTokenizer
 
-    logger.info("Model loaded: %s", target)
+        _tokenizer = AutoTokenizer.from_pretrained(target, trust_remote_code=True)
+        _model = AutoModel.from_pretrained(target, trust_remote_code=True)
+        _model.eval()
+        _model_name = target
+
+        logger.info("Model loaded: %s", target)
+
     return _model, _tokenizer
 
 
@@ -88,18 +97,6 @@ def encode_texts(
         all_embeddings.extend(embeddings.tolist())
 
     return all_embeddings
-
-
-def cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
-    """Compute cosine similarity between two vectors."""
-    a = np.array(vec_a, dtype=np.float32)
-    b = np.array(vec_b, dtype=np.float32)
-    dot = np.dot(a, b)
-    norm_a = np.linalg.norm(a)
-    norm_b = np.linalg.norm(b)
-    if norm_a == 0 or norm_b == 0:
-        return 0.0
-    return float(dot / (norm_a * norm_b))
 
 
 def get_model_info() -> Dict:

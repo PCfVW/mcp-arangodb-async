@@ -164,7 +164,9 @@ def _get_tool_categories() -> Dict[str, List[str]]:
     return categories
 
 
-def _tool_summary(name: str, detail_level: str) -> Dict[str, Any]:
+def _tool_summary(
+    name: str, detail_level: str, keywords: Optional[List[str]] = None
+) -> Dict[str, Any]:
     tools = _load_tools()
     help_tools = _load_help()
     tool = tools.get(name, {"name": name})
@@ -173,7 +175,7 @@ def _tool_summary(name: str, detail_level: str) -> Dict[str, Any]:
     if detail_level == "name":
         return {"name": name}
 
-    summary = {
+    summary: Dict[str, Any] = {
         "name": name,
         "description": tool.get("description")
         or help_item.get("description")
@@ -183,10 +185,25 @@ def _tool_summary(name: str, detail_level: str) -> Dict[str, Any]:
     if detail_level == "full":
         if "usage" in tool:
             summary["usage"] = tool["usage"]
-        if "operations" in help_item:
-            summary["operations"] = help_item["operations"]
-        if "actions" in help_item:
-            summary["actions"] = help_item["actions"]
+        actions = help_item.get("actions", {})
+        if actions and isinstance(actions, dict):
+            if keywords:
+                # Filter to actions matching keywords
+                filtered: Dict[str, Any] = {}
+                for action_name, action_info in actions.items():
+                    action_text = " ".join([
+                        action_name,
+                        str(action_info.get("description", "")),
+                    ]).lower()
+                    if any(kw in action_text for kw in keywords):
+                        filtered[action_name] = action_info
+                if filtered:
+                    summary["actions"] = filtered
+                else:
+                    # No action-level match; return action names only
+                    summary["available_actions"] = sorted(actions.keys())
+            else:
+                summary["actions"] = actions
         if "parameters" in help_item:
             summary["parameters"] = help_item["parameters"]
 
@@ -201,11 +218,16 @@ def _get_session_context(args: Dict[str, Any]) -> tuple:
 
 
 def search_tools(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
+    """Search by action name across all tools.
+
+    Matching actions return full params; non-matching tools return action list only.
+    """
     keywords = [kw.lower() for kw in args["keywords"]]
     categories_filter = args.get("categories")
     detail_level = args.get("detail_level", "full")
 
     tools = _load_tools()
+    help_tools = _load_help()
     categories = _get_tool_categories()
 
     if categories_filter:
@@ -216,32 +238,46 @@ def search_tools(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     else:
         candidate_names = sorted(tools.keys())
 
-    help_tools = _load_help()
     matches = []
     for name in candidate_names:
         tool = tools.get(name, {})
         help_item = help_tools.get(name, {})
-        search_text = " ".join(
-            [
+        actions = help_item.get("actions", {})
+        if not isinstance(actions, dict):
+            actions = {}
+
+        # Match keywords against action names only
+        matched_actions: Dict[str, Any] = {}
+        for action_name, action_info in actions.items():
+            if any(kw in action_name.lower() for kw in keywords):
+                matched_actions[action_name] = action_info
+
+        if matched_actions:
+            entry: Dict[str, Any] = {"name": name}
+            if detail_level == "full":
+                entry["actions"] = matched_actions
+            elif detail_level == "summary":
+                entry["actions"] = sorted(matched_actions.keys())
+            else:  # name
+                entry["actions"] = sorted(matched_actions.keys())
+            matches.append(entry)
+        else:
+            # Check if keyword matches tool name/description (category-level)
+            tool_text = " ".join([
                 name,
                 str(tool.get("description", "")),
-                str(tool.get("usage", "")),
-                str(help_item.get("title", "")),
-                str(help_item.get("description", "")),
-                " ".join(help_item.get("operations", []) or []),
-                " ".join(help_item.get("actions", []) or []),
-            ]
-        ).lower()
-
-        if any(keyword in search_text for keyword in keywords):
-            matches.append(_tool_summary(name, detail_level))
+            ]).lower()
+            if any(kw in tool_text for kw in keywords):
+                entry = {
+                    "name": name,
+                    "available_actions": sorted(actions.keys()),
+                }
+                matches.append(entry)
 
     return {
         "matches": matches,
         "total_matches": len(matches),
         "keywords": args["keywords"],
-        "categories_searched": categories_filter or "all",
-        "detail_level": detail_level,
     }
 
 

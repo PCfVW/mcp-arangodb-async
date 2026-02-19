@@ -35,4 +35,4 @@ def test_database_get_resolution(cli):
     output = cli("database", "get_resolution")
     assert isinstance(output, dict)
     # Should return resolution info
-    assert "database" in output or "resolution" in output or "error" in output
+    assert "levels" in output or "configuration" in output or "database" in output or "error" in output

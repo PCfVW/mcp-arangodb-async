@@ -10,7 +10,8 @@ Tests for AQL operations:
 import pytest
 from unittest.mock import MagicMock
 from mcp_arangodb_async.aql.handler import handle_aql
-from mcp_arangodb_async.aql.operations import execute_query, explain_query, profile_query, build_query
+from mcp_arangodb_async.aql.query import arango_query, explain_query, query_profile
+from mcp_arangodb_async.aql.builder import query_builder
 
 
 class TestAQLQuery:
@@ -34,7 +35,8 @@ class TestAQLQuery:
         result = handle_aql(mock_db, "query", args)
 
         # Assert
-        assert result["success"] is True or result.get("count") > 0
+        assert isinstance(result, list)
+        assert len(result) == 3
 
     def test_execute_query_with_bind_variables(self, mock_db):
         """Should execute query with bind variables."""
@@ -53,7 +55,8 @@ class TestAQLQuery:
         result = handle_aql(mock_db, "query", args)
 
         # Assert
-        assert result["success"] is True or result.get("results") is not None
+        assert isinstance(result, list)
+        assert len(result) == 2
 
     def test_execute_complex_query(self, mock_db):
         """Should execute complex multi-line query."""
@@ -76,7 +79,7 @@ class TestAQLQuery:
         result = handle_aql(mock_db, "query", args)
 
         # Assert
-        assert result["success"] is True
+        assert isinstance(result, list)
 
     def test_query_returns_results_array(self, mock_db):
         """Should return array of results."""
@@ -90,7 +93,8 @@ class TestAQLQuery:
         result = handle_aql(mock_db, "query", args)
 
         # Assert
-        assert isinstance(result, list) or result.get("results") is not None
+        assert isinstance(result, list)
+        assert len(result) == 5
 
 
 class TestAQLExplain:
@@ -119,7 +123,8 @@ class TestAQLExplain:
         result = handle_aql(mock_db, "explain", args)
 
         # Assert
-        assert result["success"] is True or "plans" in result
+        assert isinstance(result, dict)
+        assert "plans" in result
 
     def test_explain_includes_optimization_info(self, mock_db):
         """Should include optimization information."""
@@ -175,71 +180,70 @@ class TestAQLProfile:
 class TestAQLBuild:
     """Test query building utilities."""
 
-    def test_build_simple_select_query(self, mock_db):
-        """Should build SELECT-like query."""
+    def test_build_simple_query(self, mock_db):
+        """Should build and execute a filtered query."""
         # Arrange
+        mock_db.aql.execute.return_value = iter([
+            {"_key": "u1", "name": "Alice"},
+            {"_key": "u2", "name": "Bob"},
+        ])
         args = {
-            "operation": "select",
             "collection": "users",
-            "filter": {"status": "active"},
-            "fields": ["_key", "name", "email"],
+            "filters": [{"field": "status", "op": "==", "value": "active"}],
         }
 
         # Act
         result = handle_aql(mock_db, "build", args)
 
         # Assert
-        assert isinstance(result, dict)
-        assert "query" in result or "success" in result
+        assert isinstance(result, list)
 
-    def test_build_insert_query(self, mock_db):
-        """Should build INSERT query."""
+    def test_build_query_with_sort_and_limit(self, mock_db):
+        """Should build and execute a query with sort and limit."""
         # Arrange
+        mock_db.aql.execute.return_value = iter([
+            {"_key": "u1", "age": 30},
+        ])
         args = {
-            "operation": "insert",
             "collection": "users",
-            "document": {"name": "Alice", "email": "alice@example.com"},
+            "sort": [{"field": "age", "direction": "DESC"}],
+            "limit": 1,
         }
 
         # Act
         result = handle_aql(mock_db, "build", args)
 
         # Assert
-        assert isinstance(result, dict)
+        assert isinstance(result, list)
 
-    def test_build_update_query(self, mock_db):
-        """Should build UPDATE query."""
+    def test_build_query_with_return_fields(self, mock_db):
+        """Should build query with field projection."""
         # Arrange
+        mock_db.aql.execute.return_value = iter([
+            {"name": "Alice", "email": "alice@example.com"},
+        ])
         args = {
-            "operation": "update",
             "collection": "users",
-            "key": "user_1",
-            "data": {"status": "inactive"},
+            "return_fields": ["name", "email"],
         }
 
         # Act
         result = handle_aql(mock_db, "build", args)
 
         # Assert
-        assert isinstance(result, dict)
+        assert isinstance(result, list)
 
-    def test_build_query_with_joins(self, mock_db):
-        """Should build query with joins."""
+    def test_build_query_empty_collection(self, mock_db):
+        """Should return empty list when collection has no matching docs."""
         # Arrange
-        args = {
-            "operation": "select",
-            "from": [
-                {"collection": "users", "alias": "u"},
-                {"collection": "orders", "alias": "o", "join": {"u._key": "o.user_key"}},
-            ],
-            "fields": ["u.name", "o.amount"],
-        }
+        mock_db.aql.execute.return_value = iter([])
+        args = {"collection": "empty_col"}
 
         # Act
         result = handle_aql(mock_db, "build", args)
 
         # Assert
-        assert isinstance(result, dict)
+        assert result == []
 
 
 class TestAQLHandler:

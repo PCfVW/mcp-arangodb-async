@@ -34,25 +34,28 @@ OPERATIONS = {
 }
 
 
-def handle_graph(db: StandardDatabase, operation: str, args: Dict[str, Any]) -> Any:
+def handle_graph(db: StandardDatabase, action: str, args: Dict[str, Any]) -> Any:
     """Dispatch graph operations to appropriate handler functions.
 
     Args:
         db: ArangoDB database instance
-        operation: Operation name from OPERATIONS dict
+        action: Action name from OPERATIONS dict
         args: Operation arguments
 
     Returns:
         Operation result or error dictionary
     """
-    if operation not in OPERATIONS:
+    if action not in OPERATIONS:
         available = get_available_actions("arango_graph")
         return {
-            "error": f"Unknown action: {operation}",
+            "error": f"Unknown action: {action}",
             "tool": "arango_graph",
             "available_actions": available,
             "hint": f"Use one of: {', '.join(available)}"
         }
 
-    handler = OPERATIONS[operation]
-    return handler(db, args)
+    handler = OPERATIONS[action]
+    try:
+        return handler(db, args)
+    except Exception as e:
+        return {"error": str(e), "action": action}

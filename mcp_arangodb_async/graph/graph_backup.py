@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from arango.database import StandardDatabase
 
+from .traversal import safe_cursor
+
 
 def _validate_output_directory(output_dir: str) -> str:
     """Validate and sanitize output directory."""
@@ -424,9 +426,10 @@ def validate_graph_integrity_core(
                     """
                     try:
                         cursor = db.aql.execute(sample_query)
-                        for orphan in cursor:
-                            orphaned_edges.append(orphan)
-                            total_orphaned += 1
+                        with safe_cursor(cursor):
+                            for orphan in cursor:
+                                orphaned_edges.append(orphan)
+                                total_orphaned += 1
                     except Exception as e:
                         constraint_violations.append(
                             {
@@ -534,7 +537,8 @@ def calculate_graph_statistics_core(
                         RETURN {{degree: degree, frequency: frequency}}
                         """
                         cursor = db.aql.execute(degree_query)
-                        degree_dist = list(cursor)
+                        with safe_cursor(cursor):
+                            degree_dist = list(cursor)
                         graph_stats["out_degree_distribution"] = degree_dist
                         graph_stats["degree_analysis_method"] = "aggregated_all_collections"
                         if degree_dist:
@@ -556,7 +560,8 @@ def calculate_graph_statistics_core(
                             RETURN {{degree: degree, frequency: frequency}}
                             """
                             cursor = db.aql.execute(degree_query)
-                            per_collection_degrees[edge_col] = list(cursor)
+                            with safe_cursor(cursor):
+                                per_collection_degrees[edge_col] = list(cursor)
 
                     graph_stats["per_collection_degree_distribution"] = per_collection_degrees
                     graph_stats["degree_analysis_method"] = "per_collection"
@@ -571,7 +576,8 @@ def calculate_graph_statistics_core(
                     RETURN {{degree: degree, frequency: frequency}}
                     """
                     cursor = db.aql.execute(degree_query)
-                    degree_dist = list(cursor)
+                    with safe_cursor(cursor):
+                        degree_dist = list(cursor)
                     graph_stats["out_degree_distribution"] = degree_dist
                     graph_stats["degree_analysis_method"] = f"sampled_from_{first_edge_col}"
                     graph_stats["degree_analysis_warning"] = (
@@ -611,7 +617,8 @@ def calculate_graph_statistics_core(
                                 RETURN {{vertex: v._id, reachable_count: reachable}}
                                 """
                                 cursor = db.aql.execute(connectivity_query)
-                                connectivity_data = list(cursor)
+                                with safe_cursor(cursor):
+                                    connectivity_data = list(cursor)
                                 if connectivity_data:
                                     reachable_counts = [c["reachable_count"] for c in connectivity_data]
                                     per_collection_connectivity[vertex_col] = {
@@ -641,7 +648,8 @@ def calculate_graph_statistics_core(
                             RETURN {{vertex: v._id, reachable_count: reachable, collection: '{vertex_col}'}}
                             """
                             cursor = db.aql.execute(connectivity_query)
-                            total_sample_data.extend(list(cursor))
+                            with safe_cursor(cursor):
+                                total_sample_data.extend(list(cursor))
 
                     if total_sample_data:
                         reachable_counts = [c["reachable_count"] for c in total_sample_data]
@@ -679,7 +687,8 @@ def calculate_graph_statistics_core(
                     RETURN {{vertex: v._id, reachable_count: reachable}}
                     """
                     cursor = db.aql.execute(connectivity_query)
-                    connectivity_data = list(cursor)
+                    with safe_cursor(cursor):
+                        connectivity_data = list(cursor)
                     if connectivity_data:
                         reachable_counts = [c["reachable_count"] for c in connectivity_data]
                         graph_stats["connectivity_sample_size"] = len(connectivity_data)

@@ -43,10 +43,11 @@ def query_builder(
     return_fields = args.get("return_fields")
 
     # Validate collection name to prevent injection
+    # Hyphens excluded: unquoted AQL identifiers cannot contain hyphens
     if (
         not collection
         or not isinstance(collection, str)
-        or not collection.replace("_", "").replace("-", "").isalnum()
+        or not collection.replace("_", "").isalnum()
     ):
         raise ValueError("Invalid collection name")
 
@@ -57,9 +58,12 @@ def query_builder(
     def _validate_field_name(field: str) -> str:
         if not field or not isinstance(field, str):
             raise ValueError("Invalid field name")
-        # Allow alphanumeric, underscore, dot (for nested fields)
+        # First char must be letter or underscore (AQL identifier rule)
+        if not (field[0].isalpha() or field[0] == "_"):
+            raise ValueError(f"Invalid field name: {field!r} (must start with letter or _)")
+        # Allow alphanumeric, underscore, dot (for nested fields like user.email)
         if not all(c.isalnum() or c in "._" for c in field):
-            raise ValueError(f"Invalid field name: {field}")
+            raise ValueError(f"Invalid field name: {field!r}")
         return field
 
     filter_clauses: List[str] = []

@@ -58,6 +58,14 @@ class SessionState:
         async with self._lock:
             self._focused_database[session_id] = database_key
 
+    def set_focused_database_sync(self, session_id: str, database_key: Optional[str]) -> None:
+        """Set focused database for session (sync-safe, for use in sync handlers).
+
+        Dict assignment is atomic in CPython and asyncio is single-threaded,
+        so this is safe to call from sync handlers running in an asyncio event loop.
+        """
+        self._focused_database[session_id] = database_key
+
     def get_focused_database(self, session_id: str) -> Optional[str]:
         """Get focused database for session.
         

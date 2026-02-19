@@ -1,17 +1,17 @@
 {
-  "version": "4.2.0",
+  "version": "4.3.0",
   "tools": [
     {
       "name": "arango_database",
       "category": "database",
-      "description": "Database operations - multi-tenancy, session switching, backup/restore. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "description": "search_tools first for params. Database: list|get_focused|switch|get_resolution|list_available|backup|restore",
       "dispatch": "action-based",
       "actions": ["list", "get_focused", "switch", "get_resolution", "list_available", "backup", "restore"]
     },
     {
       "name": "arango_collection",
       "category": "collection",
-      "description": "Collection operations - CRUD, batch, indexing, schema, backup. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "description": "search_tools first for params. Collection: insert|find|update|remove|list|bulk_insert|bulk_update|import|export|create_index|list_indexes|delete_index|get_schema|create_schema|validate_document|validate_references|create|stats|drop|truncate|backup",
       "dispatch": "action-based",
       "actions": [
         "insert", "find", "update", "remove", "insert_with_validation", "list",
@@ -25,14 +25,14 @@
     {
       "name": "arango_view",
       "category": "view",
-      "description": "ArangoSearch view operations - create, manage, search, analyze. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "description": "search_tools first for params. View: create|drop|list|get|update|search",
       "dispatch": "action-based",
       "actions": ["create", "drop", "list", "get", "update", "search"]
     },
     {
       "name": "arango_graph",
       "category": "graph",
-      "description": "Graph operations - traversal, edges, shortest path, backup/restore. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "description": "search_tools first for params. Graph: create|list|add_vertex_collection|add_edge_definition|add_edge|traverse|shortest_path|backup|restore|backup_named|validate_integrity|statistics",
       "dispatch": "action-based",
       "actions": [
         "create", "list", "add_vertex_collection", "add_edge_definition", "add_edge",
@@ -44,7 +44,7 @@
     {
       "name": "arango_admin",
       "category": "admin",
-      "description": "Unified admin operations - AQL, templates, tag sync, edge optimization, embedding. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
+      "description": "search_tools first for params. Admin: aql_query|aql_explain|aql_profile|aql_build|template_execute|sync_run|optimize_run|quality_check|embedding_run",
       "dispatch": "action-based",
       "actions": [
         "aql_query", "aql_explain", "aql_profile", "aql_build",
@@ -55,7 +55,7 @@
     {
       "name": "arango_mcp",
       "category": "mcp",
-      "description": "MCP metadata - tool search, workflows, usage stats. Use search_tools to query action param details for any tool",
+      "description": "Tool discovery and metadata. search_tools: get action params for any arango_* tool. Also: list_by_category|get_workflow|list_workflows|usage_stats|unload",
       "dispatch": "action-based",
       "actions": ["search_tools", "list_by_category", "get_workflow", "list_workflows", "usage_stats", "unload"]
     }

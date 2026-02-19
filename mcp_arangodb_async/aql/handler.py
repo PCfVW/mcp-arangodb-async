@@ -30,7 +30,7 @@ def handle_aql(
         Operation result or error dictionary
     """
     if action not in OPERATIONS:
-        return {"error": f"Unknown AQL action: {action}"}
+        return {"error": f"Unknown AQL action: {action}", "action": action, "available_actions": list(OPERATIONS.keys())}
 
     handler = OPERATIONS[action]
 

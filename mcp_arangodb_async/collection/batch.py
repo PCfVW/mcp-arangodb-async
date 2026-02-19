@@ -6,6 +6,21 @@ from datetime import datetime
 from arango.database import StandardDatabase
 
 
+def _validate_field_name(field: str) -> str:
+    """Validate field name to prevent AQL injection.
+
+    AQL attribute identifiers must start with a letter or underscore and
+    contain only alphanumerics, underscores, or dots (for nested paths).
+    """
+    if not field or not isinstance(field, str):
+        raise ValueError("Invalid field name")
+    if not (field[0].isalpha() or field[0] == "_"):
+        raise ValueError(f"Invalid field name: {field!r} (must start with letter or _)")
+    if not all(c.isalnum() or c in "._" for c in field):
+        raise ValueError(f"Invalid field name: {field!r}")
+    return field
+
+
 def bulk_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Insert multiple documents efficiently with optional validation and batching.
 
@@ -39,9 +54,12 @@ def bulk_insert(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
                 # For unit testing, we will not depend on actual DB; assume pass-through
                 pass
             batch_result = collection.insert_many(batch, return_new=False, sync=True)
-            results["inserted_count"] += len(batch_result)
+            successes = [r for r in batch_result if isinstance(r, dict)]
+            failures = [r for r in batch_result if not isinstance(r, dict)]
+            results["inserted_count"] += len(successes)
+            results["error_count"] += len(failures)
             results["inserted_ids"].extend(
-                [r.get("_id") for r in batch_result if isinstance(r, dict)]
+                [r["_id"] for r in successes if "_id" in r]
             )
         except Exception as e:
             results["error_count"] += len(batch)
@@ -289,6 +307,7 @@ def export_documents(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, An
             limit = options.get("limit", 100)
 
             for i, (field, value) in enumerate(filter_.items()):
+                safe_field = _validate_field_name(field)
                 var = f"v{i}"
                 bind_vars[var] = value
 
@@ -296,21 +315,21 @@ def export_documents(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, An
                     for op_name, op_val in value.items():
                         bind_vars[var] = op_val
                         if op_name == "$gt":
-                            conditions.append(f"d.{field} > @{var}")
+                            conditions.append(f"d.{safe_field} > @{var}")
                         elif op_name == "$gte":
-                            conditions.append(f"d.{field} >= @{var}")
+                            conditions.append(f"d.{safe_field} >= @{var}")
                         elif op_name == "$lt":
-                            conditions.append(f"d.{field} < @{var}")
+                            conditions.append(f"d.{safe_field} < @{var}")
                         elif op_name == "$lte":
-                            conditions.append(f"d.{field} <= @{var}")
+                            conditions.append(f"d.{safe_field} <= @{var}")
                         elif op_name == "$ne":
-                            conditions.append(f"d.{field} != @{var}")
+                            conditions.append(f"d.{safe_field} != @{var}")
                         elif op_name == "$in":
-                            conditions.append(f"d.{field} IN @{var}")
+                            conditions.append(f"d.{safe_field} IN @{var}")
                         else:
-                            conditions.append(f"d.{field} == @{var}")
+                            conditions.append(f"d.{safe_field} == @{var}")
                 else:
-                    conditions.append(f"d.{field} == @{var}")
+                    conditions.append(f"d.{safe_field} == @{var}")
 
             where = " AND ".join(conditions) if conditions else "true"
             query = f"FOR d IN @@col FILTER {where} LIMIT {limit} RETURN d"

@@ -19,7 +19,7 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from types import SimpleNamespace
 
 import mcp.server.stdio
@@ -94,7 +94,7 @@ TOOL_MODELS = {
 DEFAULT_TOOL_META = {
     "arango_database": {
         "description": "Database operations - multi-tenancy, session switching, backup/restore. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
-        "operations": ["list", "get_focused", "switch", "get_resolution", "backup", "restore"],
+        "operations": ["list", "get_focused", "switch", "get_resolution", "list_available", "backup", "restore"],
     },
     "arango_collection": {
         "description": "Collection operations - CRUD, batch, indexing, schema, backup. Pass params flat with action (no nesting). Use arango_mcp search_tools for action param details",
@@ -120,7 +120,10 @@ DEFAULT_TOOL_META = {
 
 
 def build_tool_registry() -> Dict[str, Dict[str, Any]]:
-    """Build runtime registry from static handlers + JSON metadata overlays."""
+    """Build runtime registry from static handlers + JSON metadata overlays.
+
+    Description priority: MINIMAL_TOOL_DESCRIPTIONS > JSON overlay > DEFAULT_TOOL_META
+    """
     raw = get_tools_metadata()
     tools_list = raw.get("tools", [])
     meta_by_name: Dict[str, Dict[str, Any]] = {}
@@ -135,7 +138,9 @@ def build_tool_registry() -> Dict[str, Dict[str, Any]]:
         default_meta = DEFAULT_TOOL_META.get(tool_name, {})
         json_meta = meta_by_name.get(tool_name, {})
 
+        # JSON overlay (tools.json) takes priority over code defaults
         description = json_meta.get("description", default_meta.get("description", ""))
+
         operations = json_meta.get("operations")
         if operations is None:
             usage = json_meta.get("usage")
@@ -329,74 +334,6 @@ def _json_content(data: Any) -> List[types.Content]:
     """
     return [types.TextContent(type="text", text=json.dumps(data, ensure_ascii=False))]
 
-
-async def _invoke_handler(
-    handler: Callable, db: StandardDatabase, args: Dict[str, Any]
-) -> Any:
-    """Invoke handler function with appropriate signature based on parameter inspection.
-
-    This function provides dual signature support to handle two different calling conventions:
-
-    1. **Test compatibility mode**: `handler(db, **args)`
-       - Used by mocked handlers in unit tests that need to inspect individual keyword arguments
-       - Allows tests to verify specific parameter values were passed correctly
-       - Enables more granular test assertions on handler behavior
-
-    2. **Production handler mode**: `handler(db, args)`
-       - Used by actual handler implementations that expect a single args dictionary
-       - Matches the documented handler signature pattern: (db, args: Dict[str, Any])
-       - More efficient as it avoids dictionary unpacking
-
-    The signature inspection mechanism deterministically detects which signature the handler expects:
-    - Inspects handler parameters to check for **kwargs parameter
-    - Uses kwargs expansion for handlers with **kwargs (test compatibility)
-    - Uses single args dict for handlers without **kwargs (production handlers)
-    - No try/catch overhead, deterministic signature detection
-
-    Supports both sync and async handlers:
-    - Async handlers (coroutine functions) are awaited
-    - Sync handlers are called directly
-
-    Args:
-        handler: Handler function to invoke (either real implementation or test mock)
-        db: ArangoDB database instance
-        args: Validated arguments dictionary from Pydantic model
-
-    Returns:
-        Handler function result (typically Dict[str, Any] or List[Dict[str, Any]])
-
-    Note:
-        This dual signature support maintains backward compatibility while enabling
-        comprehensive testing. The pattern handles the semantic difference between
-        handlers that require arguments vs. those that don't (e.g., list_collections).
-    """
-    import inspect
-    import asyncio
-
-    # Inspect handler signature to determine calling convention
-    sig = inspect.signature(handler)
-
-    # Check if handler has **kwargs parameter (test compatibility mode)
-    has_var_keyword = any(
-        p.kind == inspect.Parameter.VAR_KEYWORD
-        for p in sig.parameters.values()
-    )
-
-    # Check if handler is async (coroutine function)
-    is_async = asyncio.iscoroutinefunction(handler)
-
-    if has_var_keyword:
-        # Test-compatible signature: handler(db, **args)
-        # This allows mocked handlers in tests to inspect individual parameters
-        if is_async:
-            return await handler(db, **args)
-        return handler(db, **args)
-    else:
-        # Production signature: handler(db, args)
-        # This matches the documented handler pattern for real implementations
-        if is_async:
-            return await handler(db, args)
-        return handler(db, args)
 
 
 @server.call_tool()

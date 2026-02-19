@@ -18,14 +18,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class MCPArgs(BaseModel):
-    """Base model for MCP metadata operations with action-based dispatch."""
-
-    model_config = ConfigDict(
-        extra="allow",
-        json_schema_extra={
-            "description": "MCP tool arguments with action-based dispatch"
-        }
-    )
+    model_config = ConfigDict(extra="allow")
 
     action: Literal[
         "search_tools",

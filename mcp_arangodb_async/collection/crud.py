@@ -11,6 +11,21 @@ from ..utility.access_log import (
 )
 
 
+def _validate_field_name(field: str) -> str:
+    """Validate field name to prevent AQL injection.
+
+    AQL attribute identifiers must start with a letter or underscore and
+    contain only alphanumerics, underscores, or dots (for nested paths).
+    """
+    if not field or not isinstance(field, str):
+        raise ValueError("Invalid field name")
+    if not (field[0].isalpha() or field[0] == "_"):
+        raise ValueError(f"Invalid field name: {field!r} (must start with letter or _)")
+    if not all(c.isalnum() or c in "._" for c in field):
+        raise ValueError(f"Invalid field name: {field!r}")
+    return field
+
+
 def list_collections(
     db: StandardDatabase, args: Optional[Dict[str, Any]] = None
 ) -> List[str]:
@@ -250,6 +265,7 @@ def find(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
         bind_vars: Dict[str, Any] = {"@col": collection_name}
 
         for i, (field, value) in enumerate(filter_.items()):
+            safe_field = _validate_field_name(field)
             var = f"v{i}"
             bind_vars[var] = value
 
@@ -258,22 +274,22 @@ def find(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
                 for op_name, op_val in value.items():
                     bind_vars[var] = op_val
                     if op_name == "$gt":
-                        conditions.append(f"d.{field} > @{var}")
+                        conditions.append(f"d.{safe_field} > @{var}")
                     elif op_name == "$gte":
-                        conditions.append(f"d.{field} >= @{var}")
+                        conditions.append(f"d.{safe_field} >= @{var}")
                     elif op_name == "$lt":
-                        conditions.append(f"d.{field} < @{var}")
+                        conditions.append(f"d.{safe_field} < @{var}")
                     elif op_name == "$lte":
-                        conditions.append(f"d.{field} <= @{var}")
+                        conditions.append(f"d.{safe_field} <= @{var}")
                     elif op_name == "$ne":
-                        conditions.append(f"d.{field} != @{var}")
+                        conditions.append(f"d.{safe_field} != @{var}")
                     elif op_name == "$in":
-                        conditions.append(f"d.{field} IN @{var}")
+                        conditions.append(f"d.{safe_field} IN @{var}")
                     else:
-                        conditions.append(f"d.{field} == @{var}")
+                        conditions.append(f"d.{safe_field} == @{var}")
             else:
                 # Equality: field: value
-                conditions.append(f"d.{field} == @{var}")
+                conditions.append(f"d.{safe_field} == @{var}")
 
         where = " AND ".join(conditions) if conditions else "true"
         query = f"FOR d IN @@col FILTER {where} LIMIT {limit} RETURN d"

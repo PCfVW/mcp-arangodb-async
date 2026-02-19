@@ -5,6 +5,34 @@ from jsonschema import Draft7Validator, ValidationError as JSONSchemaValidationE
 from arango.database import StandardDatabase
 
 
+def _validate_collection_name(name: str) -> str:
+    """Validate collection name to prevent AQL injection.
+
+    Only allows alphanumerics and underscores. Hyphens excluded: unquoted AQL
+    identifiers cannot contain hyphens (parsed as subtraction).
+    """
+    if not name or not isinstance(name, str):
+        raise ValueError("Invalid collection name")
+    if not name.replace("_", "").isalnum():
+        raise ValueError(f"Invalid collection name: {name!r} (only [A-Za-z0-9_] allowed)")
+    return name
+
+
+def _validate_field_name(field: str) -> str:
+    """Validate field name to prevent AQL injection.
+
+    AQL attribute identifiers must start with a letter or underscore and
+    contain only alphanumerics, underscores, or dots (for nested paths).
+    """
+    if not field or not isinstance(field, str):
+        raise ValueError("Invalid field name")
+    if not (field[0].isalpha() or field[0] == "_"):
+        raise ValueError(f"Invalid field name: {field!r} (must start with letter or _)")
+    if not all(c.isalnum() or c in "._" for c in field):
+        raise ValueError(f"Invalid field name: {field!r}")
+    return field
+
+
 def get_schema(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
     """Get stored JSON Schema for a collection.
 
@@ -175,15 +203,26 @@ def validate_references(
                 except Exception:
                     pass  # Ignore cleanup errors
 
-    collection = db.collection(args["collection"])
-    ref_fields: list[str] = args.get("reference_fields") or []
+    collection_name = _validate_collection_name(args["collection"])
+    collection = db.collection(collection_name)
+    raw_ref_fields: list[str] = args.get("reference_fields") or []
+    # AQL `doc[field]` only resolves top-level attributes; dots are forbidden here
+    # (doc["user.email"] looks for a literal key "user.email", not nested access)
+    ref_fields = []
+    for f in raw_ref_fields:
+        validated = _validate_field_name(f)
+        if "." in validated:
+            raise ValueError(
+                f"Reference field {f!r} contains a dot. "
+                "Only top-level fields are supported (doc[field] does not traverse nested paths)."
+            )
+        ref_fields.append(validated)
 
-    # Simple AQL validation using DOCUMENT() for each reference field
-    fields_list = ", ".join([f"'{f}'" for f in ref_fields])
+    # Use bind vars for ref_fields to prevent AQL injection
     validation_query = f"""
-    FOR doc IN {args['collection']}
+    FOR doc IN {collection_name}
       LET invalid_refs = (
-        FOR field IN [{fields_list}]
+        FOR field IN @ref_fields
           LET ref = DOCUMENT(doc[field])
           FILTER ref == null AND doc[field] != null
           RETURN {{field: field, value: doc[field]}}
@@ -191,7 +230,7 @@ def validate_references(
       FILTER LENGTH(invalid_refs) > 0
       RETURN {{ _id: doc._id, _key: doc._key, invalid_references: invalid_refs }}
     """
-    cursor = db.aql.execute(validation_query)
+    cursor = db.aql.execute(validation_query, bind_vars={"ref_fields": ref_fields})
     with safe_cursor(cursor):
         invalid_docs = list(cursor)
     result: Dict[str, Any] = {

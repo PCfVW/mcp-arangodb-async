@@ -36,11 +36,11 @@ def handle_errors(func):
             logger.error(f"Missing required parameter in {func_name}: {e}")
             return {
                 "error": f"Missing required parameter: {str(e)}",
-                "type": "KeyError",
+                "action": func_name,
             }
         else:
             logger.exception(f"Unexpected error in {func_name}")
-            return {"error": f"Operation failed: {str(e)}", "type": type(e).__name__}
+            return {"error": f"Operation failed: {str(e)}", "action": func_name}
 
     # Check if the function is async
     if asyncio.iscoroutinefunction(func):
@@ -177,7 +177,7 @@ def get_resolution(
         Dictionary with database resolution details
     """
     import os
-    from ..db_resolver import resolve_database
+    from ..utility.resolver import resolve_database
 
     # Extract session context
     if args is None:
@@ -317,10 +317,10 @@ def switch(
     if database_key is None or database_key == "":
         # Unset focused database in session state
         if session_state:
-            session_state._focused_database[session_id] = None
+            session_state.set_focused_database_sync(session_id, None)
 
             # Determine which database will be used after unsetting
-            from ..db_resolver import resolve_database
+            from ..utility.resolver import resolve_database
             config_loader = session_ctx.get("config_loader")
             fallback_db = None
             if config_loader:
@@ -360,7 +360,7 @@ def switch(
 
     # Set focused database in session state
     if session_state:
-        session_state._focused_database[session_id] = database_key
+        session_state.set_focused_database_sync(session_id, database_key)
         return {
             "success": True,
             "focused_database": database_key,

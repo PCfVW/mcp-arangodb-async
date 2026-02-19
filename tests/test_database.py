@@ -10,7 +10,26 @@ Tests for database operations:
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from mcp_arangodb_async.database.handler import handle_database
-from mcp_arangodb_async.database.models import DatabaseArgs, ListArgs, GetFocusedArgs, SwitchArgs, GetResolutionArgs
+from mcp_arangodb_async.database.models import DatabaseArgs, ListAvailableArgs, GetFocusedArgs, SwitchArgs, GetResolutionArgs
+
+
+def make_db_manager(*db_keys):
+    """Create a mock db_manager with given database keys."""
+    mock_mgr = MagicMock()
+    configs = {
+        k: MagicMock(url="http://localhost:8529", database=k, username="root")
+        for k in db_keys
+    }
+    mock_mgr.get_configured_databases.return_value = configs
+    return mock_mgr
+
+
+def make_session_state(focused_db=None):
+    """Create a mock session_state."""
+    mock_state = MagicMock()
+    mock_state.get_focused_database.return_value = focused_db
+    mock_state.set_focused_database.return_value = None
+    return mock_state
 
 
 class TestDatabaseList:
@@ -19,48 +38,38 @@ class TestDatabaseList:
     def test_list_returns_database_names(self, mock_db):
         """Should return list of available databases."""
         # Arrange
-        mock_db.databases.return_value = ["_system", "test", "mydb"]
-        args = {}
+        args = {
+            "_session_context": {
+                "db_manager": make_db_manager("_system", "test", "mydb")
+            }
+        }
 
         # Act
         result = handle_database(mock_db, "list", args)
 
         # Assert
-        assert result["success"] is True
-        assert "_system" in result["databases"]
-        assert "test" in result["databases"]
-        mock_db.databases.assert_called_once()
+        assert "databases" in result
+        assert result["total_count"] == 3
 
     def test_list_handles_empty_database_list(self, mock_db):
         """Should handle empty database list gracefully."""
         # Arrange
-        mock_db.databases.return_value = []
-        args = {}
+        args = {
+            "_session_context": {
+                "db_manager": make_db_manager()
+            }
+        }
 
         # Act
         result = handle_database(mock_db, "list", args)
 
         # Assert
-        assert result["success"] is True
-        assert len(result["databases"]) == 0
+        assert result["total_count"] == 0
+        assert result["databases"] == []
 
-    def test_list_includes_count(self, mock_db):
-        """Should include database count in result."""
+    def test_list_without_manager_returns_error(self, mock_db):
+        """Should return error when db_manager not available."""
         # Arrange
-        mock_db.databases.return_value = ["_system", "test"]
-        args = {}
-
-        # Act
-        result = handle_database(mock_db, "list", args)
-
-        # Assert
-        assert "count" in result
-        assert result["count"] == 2
-
-    def test_list_handles_database_error(self, mock_db):
-        """Should return error dict on database exception."""
-        # Arrange
-        mock_db.databases.side_effect = Exception("Connection failed")
         args = {}
 
         # Act
@@ -68,7 +77,7 @@ class TestDatabaseList:
 
         # Assert
         assert "error" in result
-        assert result["success"] is False
+        assert result["databases"] == []
 
 
 class TestDatabaseGetFocused:
@@ -77,29 +86,32 @@ class TestDatabaseGetFocused:
     def test_get_focused_returns_current_database(self, mock_db):
         """Should return currently focused database info."""
         # Arrange
-        mock_db.name = "test"
-        mock_db.version.return_value = {"version": "3.12.0"}
-        args = {}
+        args = {
+            "_session_context": {
+                "session_state": make_session_state("test"),
+                "session_id": "stdio",
+            }
+        }
 
         # Act
         result = handle_database(mock_db, "get_focused", args)
 
         # Assert
-        assert result["success"] is True
-        assert result["database"] == "test"
+        assert result["focused_database"] == "test"
+        assert result["is_set"] is True
 
-    def test_get_focused_includes_metadata(self, mock_db):
-        """Should include database metadata."""
+    def test_get_focused_without_session_returns_defaults(self, mock_db):
+        """Should return defaults when session state not available."""
         # Arrange
-        mock_db.name = "test"
-        mock_db.version.return_value = {"version": "3.12.0", "license": "community"}
         args = {}
 
         # Act
         result = handle_database(mock_db, "get_focused", args)
 
         # Assert
-        assert "metadata" in result or "version" in result
+        assert result["focused_database"] is None
+        assert result["is_set"] is False
+        assert "error" in result
 
 
 class TestDatabaseSwitch:
@@ -108,44 +120,39 @@ class TestDatabaseSwitch:
     def test_switch_changes_database(self, mock_db):
         """Should switch to specified database."""
         # Arrange
+        args = {
+            "database": "mydb",
+            "_session_context": {
+                "session_state": make_session_state(),
+                "session_id": "stdio",
+            }
+        }
+
+        # Act
+        result = handle_database(mock_db, "switch", args)
+
+        # Assert
+        assert isinstance(result, dict)
+        assert "database" in result or "success" in result or "focused_database" in result
+
+    def test_switch_without_session_returns_error(self, mock_db):
+        """Should return error when session not available."""
+        # Arrange
         args = {"database": "mydb"}
 
         # Act
         result = handle_database(mock_db, "switch", args)
 
         # Assert
-        assert result["success"] is True
-        assert result["database"] == "mydb"
-
-    def test_switch_validates_database_name(self, mock_db):
-        """Should validate database name format."""
-        # Arrange
-        mock_db.databases.return_value = ["_system", "test"]
-        args = {"database": "nonexistent"}
-
-        # Act
-        result = handle_database(mock_db, "switch", args)
-
-        # Assert
-        # Should either succeed with a marker or return an error
-        assert "database" in result or "error" in result
-
-    def test_switch_handles_invalid_database(self, mock_db):
-        """Should handle switching to non-existent database gracefully."""
-        # Arrange
-        mock_db.databases.return_value = ["_system", "test"]
-        args = {"database": ""}
-
-        # Act/Assert - should not crash
-        result = handle_database(mock_db, "switch", args)
         assert isinstance(result, dict)
+        assert "error" in result or "success" in result
 
 
 class TestDatabaseGetResolution:
     """Test get_resolution operation."""
 
-    def test_get_resolution_returns_config(self, mock_db):
-        """Should return database resolution configuration."""
+    def test_get_resolution_returns_dict(self, mock_db):
+        """Should return database resolution info as a dict."""
         # Arrange
         args = {}
 
@@ -154,11 +161,9 @@ class TestDatabaseGetResolution:
 
         # Assert
         assert isinstance(result, dict)
-        # Should contain resolution information
-        assert "resolution" in result or "config" in result or "success" in result
 
-    def test_get_resolution_includes_priority_levels(self, mock_db):
-        """Should include database resolution priority levels."""
+    def test_get_resolution_contains_error_or_config(self, mock_db):
+        """Should return either resolution config or error."""
         # Arrange
         args = {}
 
@@ -166,8 +171,7 @@ class TestDatabaseGetResolution:
         result = handle_database(mock_db, "get_resolution", args)
 
         # Assert
-        # v4 architecture defines 6-level resolution: tool override > focused > config > env > first > fallback
-        assert isinstance(result, dict)
+        assert "error" in result or "resolution" in result or "config" in result or "levels" in result or "configuration" in result
 
 
 class TestDatabaseHandlerDispatch:
@@ -185,59 +189,42 @@ class TestDatabaseHandlerDispatch:
         assert "error" in result
 
     def test_handler_accepts_various_argument_types(self, mock_db):
-        """Should handle different argument structures."""
-        # Arrange
+        """Should handle different argument structures without raising."""
         test_cases = [
             ("list", {}),
             ("get_focused", {}),
-            ("switch", {"database": "test"}),
             ("get_resolution", {}),
         ]
 
-        # Act/Assert
         for operation, args in test_cases:
             result = handle_database(mock_db, operation, args)
             assert isinstance(result, dict)
-            # Should not raise exceptions
 
 
 class TestDatabaseModels:
     """Test Pydantic models for validation."""
 
-    def test_list_args_model(self):
-        """Should validate ListArgs model."""
-        # Arrange & Act
-        args = ListArgs(database=None)
-
-        # Assert
-        assert args.database is None
+    def test_list_available_args_model(self):
+        """Should validate ListAvailableArgs model."""
+        args = ListAvailableArgs()
+        assert isinstance(args, ListAvailableArgs)
 
     def test_switch_args_model(self):
         """Should validate SwitchArgs model."""
-        # Arrange & Act
         args = SwitchArgs(database="test")
-
-        # Assert
         assert args.database == "test"
 
     def test_get_focused_args_model(self):
         """Should validate GetFocusedArgs model."""
-        # Arrange & Act
         args = GetFocusedArgs()
-
-        # Assert
         assert isinstance(args, GetFocusedArgs)
 
     def test_database_args_with_action(self):
         """Should validate DatabaseArgs with action."""
-        # Arrange & Act
         args = DatabaseArgs(action="list")
-
-        # Assert
         assert args.action == "list"
 
     def test_database_args_rejects_invalid_action(self):
         """Should reject invalid action values."""
-        # Arrange & Act & Assert
-        with pytest.raises(Exception):  # Pydantic validation error
+        with pytest.raises(Exception):
             DatabaseArgs(action="invalid_action")

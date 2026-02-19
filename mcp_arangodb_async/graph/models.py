@@ -33,14 +33,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class GraphArgs(BaseModel):
-    """Base model for graph operations with action-based dispatch."""
-
-    model_config = ConfigDict(
-        extra="allow",
-        json_schema_extra={
-            "description": "Graph tool arguments with action-based dispatch"
-        }
-    )
+    model_config = ConfigDict(extra="allow")
 
     action: Literal[
         # Management

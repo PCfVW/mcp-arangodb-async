@@ -120,11 +120,18 @@ def handle_template(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any
 
                 bind_vars[key] = value
 
-        # Handle @ collection names (special bind var syntax)
-        for key, value in bind_vars.items():
-            if key.endswith("_collection"):
-                # Use @@ syntax for collection names in AQL
-                bind_vars[f"@{key}"] = value
+        # Handle @@ collection names (AQL bind var syntax for collection names)
+        # Build separately to avoid RuntimeError from mutating dict during iteration
+        collection_vars = {
+            f"@{key}": value
+            for key, value in list(bind_vars.items())
+            if key.endswith("_collection")
+        }
+        # Remove original keys and add prefixed versions
+        for key in collection_vars:
+            original_key = key[1:]  # strip leading @
+            bind_vars.pop(original_key, None)
+        bind_vars.update(collection_vars)
 
         # Execute query
         cursor = db.aql.execute(query, bind_vars=bind_vars)

@@ -25,10 +25,6 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _now_ms() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
-
-
 def _normalize_tag(raw: Any) -> str:
     if not isinstance(raw, str):
         return ""
@@ -118,7 +114,6 @@ def _make_edge_doc(
     weight: int,
     p_forward: float,
     p_backward: float,
-    now_ms: int,
 ) -> Dict[str, Any]:
     left, right = sorted((from_key, to_key))
     return {
@@ -131,7 +126,7 @@ def _make_edge_doc(
         "p_backward": round(float(p_backward), 4),
         "enabled": True,
         "source": "auto-sync",
-        "created_at": now_ms,
+        "created_at": _now_iso(),
         "updated_at": _now_iso(),
     }
 
@@ -183,7 +178,6 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
         used_keys.add(key)
         label_to_key[label] = key
 
-    now_ms = _now_ms()
     tag_docs = [
         {
             "_key": label_to_key[label],
@@ -225,7 +219,6 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
                 weight=weight,
                 p_forward=p_forward,
                 p_backward=p_backward,
-                now_ms=now_ms,
             )
         )
         op_counter[op] += 1
@@ -249,7 +242,6 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
                 weight=10,
                 p_forward=0.0,
                 p_backward=0.0,
-                now_ms=now_ms,
             )
         )
         op_counter["NOT"] += 1
@@ -267,7 +259,6 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
                 weight=weight,
                 p_forward=0.0,
                 p_backward=0.0,
-                now_ms=now_ms,
             )
         )
         op_counter["XOR"] += 1

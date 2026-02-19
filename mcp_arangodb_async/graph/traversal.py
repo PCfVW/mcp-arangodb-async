@@ -14,7 +14,24 @@ def safe_cursor(cursor):
         yield cursor
     finally:
         if hasattr(cursor, 'close'):
-            cursor.close()
+            try:
+                cursor.close()
+            except Exception:
+                pass
+
+
+def _validate_collection_name(name: str) -> str:
+    """Validate collection name to prevent AQL injection.
+
+    Only allows alphanumerics and underscores — names used as unquoted AQL
+    identifiers. Hyphens are excluded because `FOR doc IN my-col` parses as
+    arithmetic, not a collection reference.
+    """
+    if not name or not isinstance(name, str):
+        raise ValueError("Invalid collection name")
+    if not name.replace("_", "").isalnum():
+        raise ValueError(f"Invalid collection name: {name!r} (only [A-Za-z0-9_] allowed)")
+    return name
 
 
 def traverse(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -51,7 +68,7 @@ def traverse(db: StandardDatabase, args: Dict[str, Any]) -> List[Dict[str, Any]]
                 "edge_collections must be provided when graph is not specified"
             )
         # Traversal over explicit edge collections (comma-separated list)
-        edge_expr = ", ".join(edge_cols)
+        edge_expr = ", ".join(_validate_collection_name(c) for c in edge_cols)
         aql = f"""
         FOR v, e, p IN {min_depth}..{max_depth} {direction} @start {edge_expr}
           {"LIMIT @limit" if limit else ""}
@@ -95,7 +112,7 @@ def shortest_path(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
             raise ValueError(
                 "edge_collections must be provided when graph is not specified"
             )
-        edge_expr = ", ".join(edge_cols)
+        edge_expr = ", ".join(_validate_collection_name(c) for c in edge_cols)
         aql = f"""
         FOR v, e IN {direction} SHORTEST_PATH @start TO @end {edge_expr}
           RETURN {{ vertices: v, edges: e }}

@@ -72,8 +72,8 @@ def load_config() -> Config:
     )
 
 
-def validate_config(cfg: Config) -> None:
-    """Basic validation and normalization for configuration.
+def validate_config(cfg: Config) -> Config:
+    """Validate and normalize configuration. Returns a new Config instance.
 
     - Ensures URL and database are non-empty
     - Strips whitespace
@@ -92,10 +92,10 @@ def validate_config(cfg: Config) -> None:
     if not user:
         raise ValueError("ARANGO_USERNAME is required (can be 'root' for local dev)")
 
-    # Replace fields if normalized (safe handling for frozen dataclass)
-    try:
-        object.__setattr__(cfg, "arango_url", url)
-        object.__setattr__(cfg, "database", db)
-        object.__setattr__(cfg, "username", user)
-    except Exception as e:
-        raise ValueError(f"Failed to normalize configuration: {e}")
+    return Config(
+        arango_url=url,
+        database=db,
+        username=user,
+        password=cfg.password,
+        request_timeout=cfg.request_timeout,
+    )

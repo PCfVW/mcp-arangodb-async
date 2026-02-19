@@ -17,47 +17,10 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class DatabaseArgs(BaseModel):
-    """Base model for database operations with action-based dispatch."""
-
-    model_config = ConfigDict(
-        extra="allow",  # Allow session context fields
-        json_schema_extra={
-            "description": "Database tool arguments with action-based dispatch"
-        }
-    )
+    model_config = ConfigDict(extra="allow")
 
     action: Literal["list", "get_focused", "switch", "get_resolution", "list_available", "backup", "restore"] = Field(
         description="Database operation to perform"
-    )
-
-    # Optional database parameter for switch operation
-    database: Optional[str] = Field(
-        default=None,
-        description="Database key to switch to (for switch operation). Pass None or empty string to unset."
-    )
-
-    # Backup operation parameters
-    output_dir: Optional[str] = Field(
-        default=None,
-        description="Output directory for backup (default: backups/timestamp)"
-    )
-    collections: Optional[List[str]] = Field(
-        default=None,
-        description="List of collection names to backup (default: all)"
-    )
-    type: Optional[Literal["collection", "graph", "view", "all"]] = Field(
-        default="all",
-        description="Type of backup: collection, graph, view, or all (default: all)"
-    )
-
-    # Restore operation parameters
-    input_dir: Optional[str] = Field(
-        default=None,
-        description="Backup directory path (required for restore)"
-    )
-    conflict: Optional[Literal["skip", "replace", "update"]] = Field(
-        default="skip",
-        description="Conflict resolution mode (default: skip)"
     )
 
 

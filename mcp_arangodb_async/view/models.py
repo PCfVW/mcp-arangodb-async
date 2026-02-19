@@ -21,14 +21,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 
 class ViewArgs(BaseModel):
-    """Base model for view operations with action-based dispatch."""
-
-    model_config = ConfigDict(
-        extra="allow",
-        json_schema_extra={
-            "description": "View tool arguments with action-based dispatch"
-        }
-    )
+    model_config = ConfigDict(extra="allow")
 
     action: Literal[
         # Management
