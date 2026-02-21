@@ -1,12 +1,20 @@
 """Sync operations - build/update tags and tag_edges from notes.tags.
 
-Builds quaternary edges (AND/OR/NOT/XOR) based on co-occurrence statistics.
+Builds quaternary edges (AND/OR/NOT/XOR) based on PMI co-occurrence statistics.
+
+Classification uses Pointwise Mutual Information (PMI):
+  PMI(a,b) = log2(P(a,b) / (P(a) * P(b)))
+  - AND:  PMI >= pmi_and_threshold  (strong co-occurrence)
+  - OR:   0 < PMI < pmi_and_threshold  (weak co-occurrence)
+  - NOT:  expected co-occurrence >= min_expected, actual = 0, no shared neighbors
+  - XOR:  same as NOT but with shared_neighbors >= xor_shared_min
 """
 
 from __future__ import annotations
 
 import hashlib
 import itertools
+import math
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
@@ -51,24 +59,71 @@ def _chunked(items: List[Dict[str, Any]], size: int = 1000) -> Iterable[List[Dic
         yield items[idx: idx + size]
 
 
-def _upsert_many(db: StandardDatabase, collection: str, docs: List[Dict[str, Any]]) -> int:
+def _upsert_tags(db: StandardDatabase, docs: List[Dict[str, Any]]) -> int:
+    """Upsert tags — full overwrite is safe for tag docs."""
     if not docs:
         return 0
-
-    query = f"""
+    query = """
     FOR doc IN @docs
-      UPSERT {{ _key: doc._key }}
+      UPSERT { _key: doc._key }
       INSERT doc
       UPDATE doc
-      IN {collection}
+      IN tags
     """
-
     affected = 0
     for chunk in _chunked(docs, 1000):
         cursor = db.aql.execute(query, bind_vars={"docs": chunk})
         list(cursor)
         affected += len(chunk)
     return affected
+
+
+def _merge_edges(db: StandardDatabase, docs: List[Dict[str, Any]]) -> int:
+    """Upsert edges — on UPDATE, only merge sync fields, preserve optimized fields.
+
+    Preserved fields (from optimize_run): weight, confidence, behavior_score.
+    Updated fields (from sync): op, p_forward, p_backward, enabled, updated_at.
+    """
+    if not docs:
+        return 0
+    query = """
+    FOR doc IN @docs
+      UPSERT { _key: doc._key }
+      INSERT doc
+      UPDATE MERGE(
+        { op: doc.op, p_forward: doc.p_forward, p_backward: doc.p_backward,
+          enabled: doc.enabled, source: doc.source, updated_at: doc.updated_at }
+      )
+      IN tag_edges
+    """
+    affected = 0
+    for chunk in _chunked(docs, 1000):
+        cursor = db.aql.execute(query, bind_vars={"docs": chunk})
+        list(cursor)
+        affected += len(chunk)
+    return affected
+
+
+def _disable_stale_edges(db: StandardDatabase, current_keys: set[str]) -> int:
+    """Disable auto-sync edges that no longer exist in current sync."""
+    if not current_keys:
+        return 0
+    cursor = db.aql.execute(
+        """
+        FOR e IN tag_edges
+          FILTER e.source IN @sources AND e.enabled == true AND e._key NOT IN @keys
+          UPDATE e WITH { enabled: false, updated_at: @now } IN tag_edges
+          COLLECT WITH COUNT INTO cnt
+          RETURN cnt
+        """,
+        bind_vars={
+            "sources": AUTO_EDGE_SOURCES,
+            "keys": list(current_keys),
+            "now": _now_iso(),
+        },
+    )
+    result = list(cursor)
+    return int(result[0]) if result else 0
 
 
 def _ensure_collection(db: StandardDatabase, name: str, edge: bool = False) -> None:
@@ -131,23 +186,35 @@ def _make_edge_doc(
     }
 
 
+def _compute_pmi(co: int, count_a: int, count_b: int, total: int) -> float:
+    """Compute Pointwise Mutual Information: log2(P(a,b) / (P(a)*P(b)))."""
+    if co <= 0 or count_a <= 0 or count_b <= 0 or total <= 0:
+        return float("-inf")
+    p_ab = co / total
+    p_a = count_a / total
+    p_b = count_b / total
+    return math.log2(p_ab / (p_a * p_b))
+
+
 def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str, Any]:
-    """Synchronize tags and quaternary tag_edges from notes.tags."""
+    """Synchronize tags and quaternary tag_edges from notes.tags.
+
+    Uses PMI-based classification:
+      AND:  PMI >= pmi_and (strong co-occurrence)
+      OR:   0 < PMI < pmi_and (weak co-occurrence)
+      NOT:  expected >= min_expected, actual=0, no shared neighbors (true exclusion)
+      XOR:  expected >= min_expected, actual=0, shared_neighbors >= threshold (competitive exclusion)
+    """
     defaults = get_admin_defaults("sync")
     dry_run = bool(args.get("dry_run", defaults.get("dry_run", False)))
     min_cooccur = int(args.get("min_cooccur_count", defaults.get("min_cooccur_count", 2)))
-    and_threshold = float(args.get("and_threshold", defaults.get("and_threshold", 0.8)))
-    or_threshold = float(args.get("or_threshold", defaults.get("or_threshold", 0.3)))
-    min_tag_count_for_not = int(
-        args.get("min_tag_count_for_not", defaults.get("min_tag_count_for_not", 4))
-    )
-    max_not_tags = int(args.get("max_not_tags", defaults.get("max_not_tags", 120)))
+    pmi_and = float(args.get("pmi_and", defaults.get("pmi_and", 3.0)))
+    min_expected = float(args.get("min_expected", defaults.get("min_expected", 3.0)))
+    min_tag_count = int(args.get("min_tag_count", defaults.get("min_tag_count", 4)))
     xor_shared_min = int(args.get("xor_shared_min", defaults.get("xor_shared_min", 2)))
-    clear_previous_auto = bool(
-        args.get("clear_previous_auto", defaults.get("clear_previous_auto", True))
-    )
 
     rows = _load_note_tag_rows(db)
+    total_notes = len(rows)
 
     tag_counts: Counter[str] = Counter()
     pair_counts: Counter[Tuple[str, str]] = Counter()
@@ -191,6 +258,10 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
 
     edge_docs: List[Dict[str, Any]] = []
     op_counter: Counter[str] = Counter()
+    noise_count = 0
+
+    # --- Phase 1: AND/OR from co-occurring pairs (PMI-based) ---
+    cooccur_set: set[Tuple[str, str]] = set()
 
     for (a, b), co in pair_counts.items():
         if co < min_cooccur:
@@ -198,18 +269,22 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
 
         count_a = tag_counts[a]
         count_b = tag_counts[b]
+        pmi = _compute_pmi(co, count_a, count_b, total_notes)
+
+        if pmi <= 0:
+            noise_count += 1
+            continue
+
         p_forward = co / max(1, count_a)
         p_backward = co / max(1, count_b)
+        cooccur_set.add((a, b))
 
-        op = None
-        if p_forward >= and_threshold and p_backward >= and_threshold:
+        if pmi >= pmi_and:
             op = "AND"
-            weight = int(round(24 + 20 * min((p_forward + p_backward) / 2.0, 1.0)))
-        elif max(p_forward, p_backward) >= or_threshold:
-            op = "OR"
-            weight = int(round(12 + 16 * min((p_forward + p_backward) / 2.0, 1.0)))
+            weight = int(round(24 + 20 * min(pmi / 10.0, 1.0)))
         else:
-            continue
+            op = "OR"
+            weight = int(round(12 + 16 * min(pmi / pmi_and, 1.0)))
 
         edge_docs.append(
             _make_edge_doc(
@@ -223,90 +298,76 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
         )
         op_counter[op] += 1
 
-    frequent_tags = [
-        label
-        for label, cnt in tag_counts.most_common(max_not_tags)
-        if cnt >= min_tag_count_for_not
+    # --- Phase 2: NOT/XOR from non-co-occurring pairs (expected-based) ---
+    eligible_tags = [
+        label for label, cnt in tag_counts.items()
+        if cnt >= min_tag_count
     ]
 
-    not_pairs: List[Tuple[str, str]] = []
-    for a, b in itertools.combinations(sorted(frequent_tags), 2):
+    for a, b in itertools.combinations(sorted(eligible_tags), 2):
         if (a, b) in pair_counts:
             continue
-        not_pairs.append((a, b))
-        edge_docs.append(
-            _make_edge_doc(
-                from_key=label_to_key[a],
-                to_key=label_to_key[b],
-                op="NOT",
-                weight=10,
-                p_forward=0.0,
-                p_backward=0.0,
-            )
-        )
-        op_counter["NOT"] += 1
 
-    for a, b in not_pairs:
-        shared = neighbors.get(a, set()) & neighbors.get(b, set())
-        if len(shared) < xor_shared_min:
+        count_a = tag_counts[a]
+        count_b = tag_counts[b]
+        expected = (count_a * count_b) / max(1, total_notes)
+        if expected < min_expected:
             continue
-        weight = int(min(36, 12 + (len(shared) * 3)))
+
+        shared = neighbors.get(a, set()) & neighbors.get(b, set())
+
+        if len(shared) >= xor_shared_min:
+            op = "XOR"
+            weight = int(min(36, 12 + (len(shared) * 3)))
+        else:
+            op = "NOT"
+            weight = int(round(10 + 10 * min(expected / 10.0, 1.0)))
+
         edge_docs.append(
             _make_edge_doc(
                 from_key=label_to_key[a],
                 to_key=label_to_key[b],
-                op="XOR",
+                op=op,
                 weight=weight,
                 p_forward=0.0,
                 p_backward=0.0,
             )
         )
-        op_counter["XOR"] += 1
+        op_counter[op] += 1
 
     dedup = {doc["_key"]: doc for doc in edge_docs}
     edge_docs = list(dedup.values())
+    current_edge_keys = set(dedup.keys())
 
     written_tags = 0
-    removed_edges = 0
-    written_edges = 0
+    merged_edges = 0
+    disabled_edges = 0
 
     if not dry_run:
         _ensure_collection(db, "tags", edge=False)
         _ensure_collection(db, "tag_edges", edge=True)
 
-        written_tags = _upsert_many(db, "tags", tag_docs)
-
-        if clear_previous_auto:
-            remove_query = """
-            FOR e IN tag_edges
-              FILTER e.source IN @sources
-              REMOVE e IN tag_edges
-              COLLECT WITH COUNT INTO removed
-              RETURN removed
-            """
-            removed = list(db.aql.execute(remove_query, bind_vars={"sources": AUTO_EDGE_SOURCES}))
-            removed_edges = int(removed[0]) if removed else 0
-
-        written_edges = _upsert_many(db, "tag_edges", edge_docs)
+        written_tags = _upsert_tags(db, tag_docs)
+        merged_edges = _merge_edges(db, edge_docs)
+        disabled_edges = _disable_stale_edges(db, current_edge_keys)
 
     result = {
         "status": "ok",
         "dry_run": dry_run,
-        "notes_processed": len(rows),
+        "notes_processed": total_notes,
         "tags_distinct": len(tag_counts),
         "pairs_distinct": len(pair_counts),
         "tags_written": written_tags,
-        "edges_removed": removed_edges,
-        "edges_written": written_edges,
+        "edges_merged": merged_edges,
+        "edges_disabled": disabled_edges,
+        "noise_skipped": noise_count,
         "edge_ops": dict(op_counter),
         "params": {
             "min_cooccur_count": min_cooccur,
-            "and_threshold": and_threshold,
-            "or_threshold": or_threshold,
-            "min_tag_count_for_not": min_tag_count_for_not,
-            "max_not_tags": max_not_tags,
+            "pmi_and": pmi_and,
+            "min_expected": min_expected,
+            "min_tag_count": min_tag_count,
             "xor_shared_min": xor_shared_min,
-            "clear_previous_auto": clear_previous_auto,
         },
     }
 
@@ -318,8 +379,9 @@ def sync_tags_and_edges(db: StandardDatabase, args: Dict[str, Any]) -> Dict[str,
         metrics={
             "notes_processed": result["notes_processed"],
             "tags_distinct": result["tags_distinct"],
-            "edges_written": result["edges_written"],
-            "edges_removed": result["edges_removed"],
+            "edges_merged": merged_edges,
+            "edges_disabled": disabled_edges,
+            "noise_skipped": noise_count,
         },
         args=result["params"],
     )

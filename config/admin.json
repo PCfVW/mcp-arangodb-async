@@ -3,12 +3,10 @@
   "sync": {
     "dry_run": false,
     "min_cooccur_count": 2,
-    "and_threshold": 0.8,
-    "or_threshold": 0.3,
-    "min_tag_count_for_not": 4,
-    "max_not_tags": 120,
-    "xor_shared_min": 2,
-    "clear_previous_auto": true
+    "pmi_and": 3.0,
+    "min_expected": 3.0,
+    "min_tag_count": 4,
+    "xor_shared_min": 2
   },
   "optimize": {
     "dry_run": false,

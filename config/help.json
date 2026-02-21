@@ -469,13 +469,14 @@
           "example": {"action": "template_execute", "name": "search.quaternary", "params": {"query": "tags rule"}}
         },
         "sync_run": {
-          "description": "Sync tags and tag_edges from notes.tags",
+          "description": "Sync tags and tag_edges from notes.tags (PMI-based classification)",
           "params": {
             "dry_run": {"type": "boolean", "default": false},
             "min_cooccur_count": {"type": "integer", "default": 2},
-            "and_threshold": {"type": "number", "default": 0.8},
-            "or_threshold": {"type": "number", "default": 0.3},
-            "clear_previous_auto": {"type": "boolean", "default": true}
+            "pmi_and": {"type": "number", "default": 3.0, "description": "PMI threshold for AND (strong co-occurrence)"},
+            "min_expected": {"type": "number", "default": 3.0, "description": "Minimum expected co-occurrence for NOT/XOR edges"},
+            "min_tag_count": {"type": "integer", "default": 4, "description": "Minimum tag occurrences to participate in NOT/XOR"},
+            "xor_shared_min": {"type": "integer", "default": 2, "description": "Minimum shared neighbors for XOR (vs NOT)"}
           },
           "example": {"action": "sync_run", "dry_run": true}
         },
